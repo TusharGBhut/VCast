@@ -1,0 +1,31 @@
+body { width: 340px; margin: 0; padding: 12px; font: 14px/1.4 system-ui, sans-serif; color: #1c2230; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+h1 { font-size: 18px; margin: 0; }
+p { margin: 0 0 8px; }
+.hidden { display: none !important; }
+.small { font-size: 12px; color: #5b6475; }
+.error { background: #fde8e8; color: #9b1c1c; padding: 8px; border-radius: 6px; }
+.address { font-weight: 600; user-select: all; }
+button { padding: 6px 12px; border: 1px solid #b8c0cf; border-radius: 6px; background: #fff; cursor: pointer; font: inherit; }
+button:hover:not(:disabled) { background: #eef3fb; }
+button:disabled { opacity: 0.5; cursor: default; }
+button.link { border: 0; padding: 0; color: #1a5fd0; background: none; }
+#serverForm { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+#serverForm label { width: 100%; }
+#serverAddress { flex: 1; padding: 6px; }
+#tvForm { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+#tvForm label { width: 100%; }
+#tvIp { flex: 1; padding: 6px; }
+#tvList button { display: block; width: 100%; margin-bottom: 6px; text-align: left; font-weight: 600; }
+#pairForm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#pairForm label { width: 100%; }
+#code { width: 120px; padding: 6px; font-size: 20px; letter-spacing: 4px; }
+#videos { list-style: none; margin: 0; padding: 0; }
+#videos li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid #e3e7ef; }
+#videos .detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 230px; }
+#nowPlaying { background: #f3f6fb; padding: 8px; border-radius: 6px; margin-bottom: 8px; }
+#playingTitle { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#seek { width: 100%; }
+.buttons { display: flex; gap: 6px; margin-bottom: 8px; }
+.volume { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+select { padding: 4px; font: inherit; }

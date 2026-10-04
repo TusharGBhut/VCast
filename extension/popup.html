@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>VCast</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>VCast</h1>
+    <button id="unpair" class="link hidden" type="button">Unpair TV</button>
+  </header>
+
+  <p id="error" class="error hidden" role="alert"></p>
+
+  <section id="serverDownView" class="hidden">
+    <p id="serverDownText"></p>
+    <button id="retry" type="button">Try again</button>
+    <form id="serverForm">
+      <label for="serverAddress" class="small">VCast address on this computer (change only if you changed the port)</label>
+      <input id="serverAddress" type="url" required>
+      <button type="submit">Save</button>
+    </form>
+  </section>
+
+  <section id="pairView" class="hidden">
+    <p>Turn the TV on, then open VCast on it:</p>
+    <div id="tvList"></div>
+    <form id="tvForm">
+      <label for="tvIp" class="small">TV not listed? Type its address (TV Settings &gt; Network &gt; Network Status)</label>
+      <input id="tvIp" placeholder="192.168.1.6" required>
+      <button type="submit">Open on TV</button>
+    </form>
+    <p id="waiting" class="small"></p>
+
+    <p class="small">Other way: on the TV, open the Internet app and go to <span id="tvAddress" class="address"></span></p>
+    <form id="pairForm">
+      <label for="code">Code shown on the TV</label>
+      <input id="code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="off" required>
+      <button type="submit">Pair</button>
+    </form>
+  </section>
+
+  <section id="mainView" class="hidden">
+    <p id="tvStatus"></p>
+
+    <div id="nowPlaying" class="hidden">
+      <p id="playingTitle"></p>
+      <input id="seek" type="range" min="0" max="0" step="1" aria-label="Position">
+      <p id="times" class="small"></p>
+      <div class="buttons">
+        <button id="back" type="button">-10s</button>
+        <button id="playPause" type="button">Pause</button>
+        <button id="forward" type="button">+30s</button>
+        <button id="stop" type="button">Stop</button>
+      </div>
+      <label class="volume">Volume <input id="volume" type="range" min="0" max="1" step="0.05"></label>
+    </div>
+
+    <label id="subtitlesRow" class="volume hidden">Subtitles <select id="subtitles"></select></label>
+    <div id="subtitleTiming" class="hidden">
+      <p class="small">Subtitles not in step with the speech? Move them:</p>
+      <div class="buttons">
+        <button id="subtitlesEarlier" type="button">Earlier</button>
+        <button id="subtitlesLater" type="button">Later</button>
+        <button id="subtitlesReset" type="button" class="link">Reset</button>
+      </div>
+      <p id="subtitleShift" class="small"></p>
+    </div>
+    <p id="notice" class="small"></p>
+    <ul id="videos"></ul>
+  </section>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
