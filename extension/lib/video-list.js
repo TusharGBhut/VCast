@@ -1,7 +1,7 @@
 // What counts as a video, and how the per-tab list of found videos is kept. No browser calls
 // in here, so it can be tested on its own.
 
-import { MAX_SUBTITLES_PER_TAB, MAX_VIDEOS_PER_TAB } from './constants.js';
+import { LOADED_JUST_BEFORE_MS, MAX_SUBTITLES_PER_TAB, MAX_VIDEOS_PER_TAB } from './constants.js';
 
 // Where a tab's info is kept in chrome.storage.session.
 export function tabKey(tabId) {
@@ -78,8 +78,40 @@ export function emptyTabInfo() {
   return { videos: [], subtitles: [], hasDrm: false, hasHiddenVideo: false };
 }
 
+// Which page a tab is on: the address without the parts after "?" and "#", which sites change
+// while the same video keeps playing.
+export function pageOf(link) {
+  try {
+    return sameVideoKey(link);
+  } catch (e) {
+    return '';
+  }
+}
+
+// An empty list for a tab that has just moved to `link`. `since` is that moment; links found
+// before it belong to the page that was left.
+export function tabInfoForNewPage(link, now) {
+  return { ...emptyTabInfo(), page: pageOf(link), since: now };
+}
+
+// True when a link was found before the tab moved to its current page.
+function isFromEarlierPage(tabInfo, item) {
+  return item.foundAt !== undefined && item.foundAt < (tabInfo.since || 0) - LOADED_JUST_BEFORE_MS;
+}
+
+// Returns the tab info without what was found in one frame, or null when that frame had nothing.
+// Used when a frame (the player's iframe) loads a new page.
+export function withoutFrame(tabInfo, frameId) {
+  const elsewhere = (item) => item.frameId !== frameId;
+  const videos = tabInfo.videos.filter(elsewhere);
+  const subtitles = (tabInfo.subtitles || []).filter(elsewhere);
+  if (videos.length === tabInfo.videos.length && subtitles.length === (tabInfo.subtitles || []).length) return null;
+  return { ...tabInfo, videos, subtitles };
+}
+
 // Returns the tab info with the subtitle added, or null when it is already there or the list is full.
 export function addSubtitle(tabInfo, subtitle) {
+  if (isFromEarlierPage(tabInfo, subtitle)) return null;
   const known = tabInfo.subtitles || [];
   const key = sameVideoKey(subtitle.url);
   if (known.length >= MAX_SUBTITLES_PER_TAB || known.some((item) => sameVideoKey(item.url) === key)) return null;
@@ -88,6 +120,7 @@ export function addSubtitle(tabInfo, subtitle) {
 
 // Returns the tab info with the video added, or null when nothing changed.
 export function addVideo(tabInfo, video) {
+  if (isFromEarlierPage(tabInfo, video)) return null;
   const key = sameVideoKey(video.url);
   const known = tabInfo.videos.find((item) => sameVideoKey(item.url) === key);
   if (known) {

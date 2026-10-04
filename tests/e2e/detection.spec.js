@@ -232,3 +232,28 @@ test('two tabs keep separate lists, and closing a tab removes its list', async (
   await first.close();
   await until(async () => !('tab:' + tabId in (await chrome.savedTabs())), 'the closed tab\'s list to be removed');
 });
+
+test('AC-22: next episode without a page load: only the new episode is listed, also after the popup looks again', async () => {
+  const first = site.link('/show/ep-1');
+  const second = site.link('/show/ep-2');
+  const page = await open(first);
+  await untilVideos(first, 1);
+
+  // Only the part after "?" changes: still the same video, so the list stays.
+  await page.evaluate(() => window.sameEpisodeNewTime());
+  await wait(500);
+  const sameEpisode = await chrome.tabInfoOf(first + '?t=90');
+  assert.deepEqual(sameEpisode.videos.map((video) => video.url), [site.link('/hls/master.m3u8')]);
+
+  await page.evaluate(() => window.nextEpisode());
+  await until(async () => ((await chrome.tabInfoOf(second)) || { videos: [] }).videos.length === 1, 'the new episode to be listed');
+  let info = await chrome.tabInfoOf(second);
+  assert.deepEqual(info.videos.map((video) => video.url), [site.link('/hls/low/index.m3u8')], 'episode 1 is gone from the list');
+
+  // What the popup does when it opens. The page still remembers that it loaded episode 1.
+  const tabId = await chrome.tabIdOf(second);
+  await chrome.worker.evaluate((id) => globalThis.chrome.scripting.executeScript({ target: { tabId: id, allFrames: true }, files: ['page-watcher.js'] }), tabId);
+  await wait(500);
+  info = await chrome.tabInfoOf(second);
+  assert.deepEqual(info.videos.map((video) => video.url), [site.link('/hls/low/index.m3u8')], 'looking again does not bring episode 1 back');
+});

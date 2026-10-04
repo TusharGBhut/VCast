@@ -10,6 +10,9 @@ export const SAVED_SERVER = 'serverAddress';
 export const SAVED_TV = 'tvAddress';
 
 export const MAX_VIDEOS_PER_TAB = 15;
+// A link loaded this long before the page changed still counts as belonging to the new page:
+// some sites load the next video a moment before they change the address.
+export const LOADED_JUST_BEFORE_MS = 3000;
 export const MAX_SUBTITLES_PER_TAB = 30;
 export const SUBTITLES_OFF = -1;
 export const SAVED_SUBTITLE = 'subtitleChoice';

@@ -80,6 +80,13 @@ function pages(other) {
       'Player that builds its video',
       '<video id="v" autoplay muted loop width="320"></video><script>fetch("/media/bytes").then(function (r) { return r.blob(); }).then(function (b) { document.getElementById("v").src = URL.createObjectURL(b); });</script>'
     ),
+    // A site that plays the next episode without loading a new page: it changes the address
+    // and fetches the new stream.
+    '/show/ep-1': html(
+      'The show, episode 1',
+      '<script>fetch("/hls/master.m3u8"); window.nextEpisode = function () { history.pushState({}, "", "/show/ep-2"); return fetch("/hls/low/index.m3u8"); };' +
+        'window.sameEpisodeNewTime = function () { history.replaceState({}, "", location.pathname + "?t=90"); };</script>'
+    ),
     '/audio.html': html('Just a song', '<audio id="a" src="/media/song.wav" autoplay muted loop></audio>'),
     '/plain.html': html('No video here', '<p>Nothing to watch.</p><script>fetch("/data.json");</script>')
   };

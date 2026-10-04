@@ -30,7 +30,8 @@
     try {
       var loaded = performance.getEntriesByType('resource');
       for (var i = 0; i < loaded.length && links.length < MAX_LINKS; i++) {
-        if (STREAM_OR_SUBTITLE.test(loaded[i].name.split('?')[0])) links.push(loaded[i].name);
+        // `at` is the clock time the link was loaded, so links from an earlier video can be told apart.
+        if (STREAM_OR_SUBTITLE.test(loaded[i].name.split('?')[0])) links.push({ url: loaded[i].name, at: Math.round(performance.timeOrigin + loaded[i].startTime) });
       }
     } catch (e) { /* the list is not available in this frame */ }
     return links;
