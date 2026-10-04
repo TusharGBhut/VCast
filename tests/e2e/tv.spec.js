@@ -837,3 +837,65 @@ async function shownCodeAfterReconnect(page) {
   await until(async () => (await page.locator('#connection').innerText()) === '', 'the page to reconnect', 15000);
   return shownCode(page);
 }
+
+test('AC-23: the remote works the player like an app: arrows choose, OK presses', async () => {
+  const tv = await openPlayingTv();
+  const page = tv.page;
+  const press = (key) => page.keyboard.press(key);
+  const selected = () =>
+    page.evaluate(() => {
+      const ids = ['bar', 'backButton', 'playButton', 'forwardButton', 'stopButton'];
+      return ids.filter((id) => /selected/.test(document.getElementById(id).className)).join(',');
+    });
+  assert.equal(await selected(), 'bar', 'the remote starts on the progress bar');
+
+  await control(tv.session, 'pause');
+  await until(async () => (await videoOf(page)).paused, 'the video to pause');
+  await control(tv.session, 'seek', 40);
+  await until(async () => (await videoOf(page)).time === 40, 'the video to be at 40 s');
+
+  await press('ArrowDown');
+  assert.equal(await selected(), 'playButton', 'Down goes to the buttons, on Play/Pause');
+  await press('ArrowRight');
+  assert.equal(await selected(), 'forwardButton');
+  assert.equal((await videoOf(page)).time, 40, 'on the buttons, Right moves the highlight, not the video');
+  await press('Enter');
+  await until(async () => (await videoOf(page)).time === 50, 'OK on +10s to move to 50 s');
+
+  await press('ArrowLeft');
+  await press('ArrowLeft');
+  await press('ArrowLeft');
+  assert.equal(await selected(), 'backButton', 'the highlight stops at the first button');
+  await press('Enter');
+  await until(async () => (await videoOf(page)).time === 40, 'OK on -10s to move back to 40 s');
+
+  await press('ArrowRight');
+  await press('Enter');
+  await untilPlaying(page, 40);
+  assert.equal(await selected(), 'playButton');
+
+  await press('ArrowUp');
+  assert.equal(await selected(), 'bar', 'Up goes back to the progress bar');
+  await press('Enter');
+  await until(async () => (await videoOf(page)).paused, 'OK on the bar to pause');
+  await press('ArrowRight');
+  await until(async () => (await videoOf(page)).time >= 50, 'Right on the bar to move 10 s');
+  await press('Enter');
+  await untilPlaying(page, 50);
+
+  // When the controls hide, the pointer hides too and the remote is back on the bar.
+  await press('ArrowDown');
+  await page.locator('#overlay').waitFor({ state: 'hidden', timeout: 7000 });
+  assert.equal(await selected(), 'bar');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('playerScreen')).cursor), 'none');
+  await page.mouse.move(200, 200);
+  await page.mouse.move(220, 220);
+  await until(async () => (await page.evaluate(() => getComputedStyle(document.getElementById('playerScreen')).cursor)) !== 'none', 'the pointer to come back when moved');
+
+  await press('ArrowDown');
+  for (let i = 0; i < 5; i++) await press('ArrowRight');
+  assert.equal(await selected(), 'stopButton', 'the highlight stops at the last button');
+  await press('Enter');
+  await page.locator('#readyScreen').waitFor({ state: 'visible' });
+  await until(async () => (await stateOf(tv.session)).cast === null, 'Stop to end the cast on the server');
+});

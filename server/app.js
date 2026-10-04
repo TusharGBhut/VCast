@@ -307,6 +307,10 @@ function createApp(options) {
       log.info('TV asked for a new code', { tv: shortId(tv.id) });
       return showCodeOnTv(tv, true);
     }
+    // Which remote keys reach the page differs from one TV browser to the next; the log shows it.
+    if (message.type === 'tv.input') {
+      return log.debug(message.pointer ? 'TV pointer moved' : 'TV remote key', { tv: shortId(tv.id), key: Number(message.key) || undefined });
+    }
     // Stop pressed on the TV remote.
     if (message.type === 'media.stopped' && tv.cast) {
       endCast(tv);

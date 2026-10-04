@@ -519,7 +519,12 @@ test('odd TV messages and connections never stop the server', async () => {
   const tv = await connectTv(port, 'television-odd');
   await tv.next('pair.code');
   for (const text of ['null', '5', '"text"', '[]', '{"type":{}}']) tv.socket.send(text);
+  // AC-23: what the remote sent shows up in the debug log.
+  tv.send({ type: 'tv.input', key: 40 });
+  tv.send({ type: 'tv.input', pointer: true });
   await wait(50);
+  assert.ok(logLines.some((line) => /DEBUG app +TV remote key {2}tv=televi {2}key=40$/.test(line)));
+  assert.ok(logLines.some((line) => /DEBUG app +TV pointer moved {2}tv=televi$/.test(line)));
 
   const refused = (address, options) => new Promise((resolve) => new WebSocket(address, options).on('error', () => resolve('refused')).on('open', () => resolve('open')));
   assert.equal(await refused('ws://127.0.0.1:' + port + '//'), 'refused');
