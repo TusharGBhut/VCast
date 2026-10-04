@@ -3,7 +3,7 @@
 
 import { createServerApi } from './lib/server-api.js';
 import { emptyTabInfo, sortVideos, tabKey } from './lib/video-list.js';
-import { DRM_TEXT, HIDDEN_VIDEO_TEXT, NO_VIDEO_TEXT, OPENING_ON_TV_TEXT, clock, errorText, nextSubtitleShift, pickSubtitle, playButtonAction, playbackProblemText, subtitleName, subtitleShiftText, videoLabel } from './lib/text.js';
+import { DRM_TEXT, HIDDEN_VIDEO_TEXT, NO_VIDEO_TEXT, OPENING_ON_TV_TEXT, clock, errorText, nextSubtitleShift, pickSubtitle, playButtonAction, playbackProblemText, subtitleName, subtitleShiftText, videoLabel, videoTitle } from './lib/text.js';
 import { logger } from './lib/log.js';
 import { DEFAULT_SERVER, POPUP_REFRESH_MS, SAVED_SERVER, SAVED_SESSION, SAVED_SUBTITLE, SAVED_TV, SEEK_BACK_SECONDS, SEEK_FORWARD_SECONDS, SUBTITLES_OFF } from './lib/constants.js';
 
@@ -208,10 +208,12 @@ function onSliderMoved(id, action) {
   });
 }
 
-function castVideo(video) {
+async function castVideo(video) {
   const headers = { userAgent: navigator.userAgent, ...video.headers };
   log.info('Casting', { kind: video.kind, site: video.url });
-  return api.cast({ ...video, headers }, tab.title || '', foundSubtitles, Number(byId('subtitles').value));
+  // Read the tab again: its title and address may have changed since the popup opened.
+  tab = await chrome.tabs.get(tab.id).catch(() => tab);
+  return api.cast({ ...video, headers }, videoTitle(tab.title, tab.url), foundSubtitles, Number(byId('subtitles').value));
 }
 
 function seekBy(seconds) {

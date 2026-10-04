@@ -34,6 +34,13 @@ Each needs the real TV or a real browser. Record the answers below as findings.
 - Observed: `OS: Tizen`, `model: 23_K2LC_SQY_UHD_LIC`, `modelName: ST24043454`, `resolution: 3840x2160`, `developerMode: 0`, `DMP_available: true`, `TokenAuthSupport: true`, `remote_available: true`. Ports 9197 and 7676 (usual Samsung DLNA ports) did not answer.
 - Consequence: a 2023 platform should have a recent enough browser for hls.js; still to confirm on the TV itself. DLNA (R2) needs a proper search of the network before it is counted on. 4K is possible, so the quality list (C2) should offer it.
 
+### F-011: This site plays the next episode without loading a new page, and never updates the tab title
+- Date: 2026-10-04
+- Source: the owner's screenshot (four streams listed, title "Episode 1" while episode 18 played), then a Playwright run on the same site pressing Next
+- Observed: pressing Next changes the address from `/ep-17` to `/ep-18` with no page load, and the player frame (same frame id) loads a new page and fetches the new stream. The tab's title stays what it was when the tab was first opened. The frame's own list of loaded links keeps only the new episode, because the frame loaded a new page.
+- Consequence: the tab's list is emptied when the page part of the address changes, and a frame that loads a new page loses its entries. Links are stored with the time they were loaded, so looking at the page again cannot bring back older ones. The title sent to the TV is made from the address when it ends in an episode number the tab title does not mention ("Dr Stone · Episode 18"). After the change the real site listed only episode 18's two entries.
+- Still open: each episode shows two entries, the main playlist and one quality of it. Telling them apart needs the server to read the main playlist (customer item C1).
+
 ### F-010: When the laptop sleeps, the TV stops; sleep from sitting idle can be held off, a closed lid cannot
 - Date: 2026-10-04
 - Source: the owner's report (the laptop's screen switched off or locked and the video stopped), then a check on this Mac

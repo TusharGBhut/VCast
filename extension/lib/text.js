@@ -77,6 +77,23 @@ export function subtitleShiftText(seconds) {
   return 'Shown ' + Math.abs(seconds) + ' s ' + (seconds > 0 ? 'later' : 'earlier');
 }
 
+// The title to show on the TV. Normally the tab's title. Some sites play the next episode
+// without updating it; when the address ends in an episode number the title does not mention,
+// the title is made from the address: ".../dr-stone/ep-18" gives "Dr Stone · Episode 18".
+export function videoTitle(tabTitle, pageLink) {
+  const title = tabTitle || '';
+  let parts;
+  try {
+    parts = new URL(pageLink).pathname.split('/').filter(Boolean);
+  } catch (e) {
+    return title;
+  }
+  const episode = /^(?:ep|episode|e|chapter|part)[-_.]?(\d+)$/i.exec(parts.at(-1) || '');
+  if (!episode || new RegExp('\\b0*' + Number(episode[1]) + '\\b').test(title)) return title;
+  const show = (parts.at(-2) || '').replace(/[-_]+/g, ' ').replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+  return (show ? show + ' · ' : '') + 'Episode ' + Number(episode[1]);
+}
+
 const KIND_NAME = { hls: 'Stream', file: 'Video file', dash: 'DASH stream (not supported yet)' };
 
 // What to show for one found video: its kind, the site, and the file name.

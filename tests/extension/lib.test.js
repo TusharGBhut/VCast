@@ -112,6 +112,39 @@ test('AC-19: subtitle timing steps and the text that shows it', () => {
   assert.equal(subtitleShiftText(-1.5), 'Shown 1.5 s earlier');
 });
 
+test('AC-22: a tab that moved to a new page starts an empty list and refuses older links', () => {
+  const { pageOf, tabInfoForNewPage, withoutFrame, addVideo, addSubtitle } = videoList;
+  assert.equal(pageOf('https://site.example/watch/show/ep-2?t=5#x'), 'site.example/watch/show/ep-2');
+  assert.equal(pageOf('not a link'), '');
+
+  const info = tabInfoForNewPage('https://site.example/watch/show/ep-2', 100000);
+  assert.deepEqual(info, { videos: [], subtitles: [], hasDrm: false, hasHiddenVideo: false, page: 'site.example/watch/show/ep-2', since: 100000 });
+  const old = { url: 'https://cdn.example/ep1.m3u8', kind: 'hls', headers: {}, foundAt: 50000 };
+  assert.equal(addVideo(info, old), null, 'found long before the page changed');
+  assert.equal(addSubtitle(info, { url: 'https://cdn.example/ep1.vtt', label: 'eng', foundAt: 50000 }), null);
+  assert.equal(addVideo(info, { ...old, foundAt: 98000 }).videos.length, 1, 'loaded a moment before the address changed: still the new page');
+  assert.equal(addVideo(info, { ...old, foundAt: 100500 }).videos.length, 1);
+  assert.equal(addSubtitle(info, { url: 'https://cdn.example/ep2.vtt', label: 'eng' }).subtitles.length, 1, 'no time known: kept');
+
+  const mixed = { ...info, videos: [{ url: 'a', frameId: 7 }, { url: 'b', frameId: 9 }], subtitles: [{ url: 'c', frameId: 7 }] };
+  assert.deepEqual(withoutFrame(mixed, 7), { ...info, videos: [{ url: 'b', frameId: 9 }], subtitles: [] });
+  assert.equal(withoutFrame(mixed, 11), null, 'nothing from that frame: nothing changes');
+  assert.equal(withoutFrame({ videos: [] }, 7), null, 'tab info saved by an older version has no subtitle list');
+});
+
+test('R19: the title follows the episode when the site forgets to update the tab title', () => {
+  const { videoTitle } = text;
+  const stale = 'Dr. Stone Episode 1 English Sub - AnimeKai';
+  assert.equal(videoTitle(stale, 'https://animekai.be/watch/dr-stone/ep-18'), 'Dr Stone · Episode 18');
+  assert.equal(videoTitle(stale, 'https://animekai.be/watch/dr-stone/ep-1'), stale, 'the title already names this episode');
+  assert.equal(videoTitle('Show - Episode 07', 'https://site.example/show/episode-07'), 'Show - Episode 07');
+  assert.equal(videoTitle('Funny cats', 'https://site.example/video/839201'), 'Funny cats', 'not an episode address: the tab title is used');
+  assert.equal(videoTitle('Funny cats', 'https://site.example/'), 'Funny cats');
+  assert.equal(videoTitle('Old title', 'https://site.example/e5'), 'Episode 5', 'no show name in the address');
+  assert.equal(videoTitle(undefined, 'not a link'), '');
+  assert.equal(videoTitle(undefined, 'https://site.example/my_show/chapter_3'), 'My Show · Episode 3');
+});
+
 test('the best guess comes first: streams, then files, then DASH', () => {
   const videos = [
     { kind: 'dash', foundAt: 1 },
