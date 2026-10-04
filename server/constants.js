@@ -24,6 +24,8 @@ module.exports = {
   TV_SEARCH_MS: 2000,
   TV_INFO_PORT: 8001,
   TV_INFO_WAIT_MS: 2000,
+  // Starting the browser took the real TV about 8 seconds to answer (F-009), so wait well past that.
+  TV_APP_SERVICE_WAIT_MS: 25 * 1000,
   TV_REMOTE_PORT: 8002,
   TV_ALLOW_WAIT_MS: 30 * 1000,
   // Samsung's own TVs start the browser through the remote-control connection under this name.

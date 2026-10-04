@@ -34,6 +34,14 @@ Each needs the real TV or a real browser. Record the answers below as findings.
 - Observed: `OS: Tizen`, `model: 23_K2LC_SQY_UHD_LIC`, `modelName: ST24043454`, `resolution: 3840x2160`, `developerMode: 0`, `DMP_available: true`, `TokenAuthSupport: true`, `remote_available: true`. Ports 9197 and 7676 (usual Samsung DLNA ports) did not answer.
 - Consequence: a 2023 platform should have a recent enough browser for hls.js; still to confirm on the TV itself. DLNA (R2) needs a proper search of the network before it is counted on. 4K is possible, so the quality list (C2) should offer it.
 
+### F-009: A TV page left open keeps running its old code; and the TV needs about 8 seconds to start its browser
+- Date: 2026-10-04
+- Source: the owner's report ("the play/pause buttons are not showing on the TV") and `~/.vcast/vcast.log`
+- Observed:
+  - The page was opened on the TV at 15:21. VCast was updated and restarted at 15:42. The page reconnected on its own (`TV connected paired=false`), showed a code, and was paired by code. It was never loaded again, so it still ran the page from before the update, without the new buttons.
+  - At 15:21 the request that starts the TV's browser took about 8 seconds to be answered, right at the 8-second limit VCast had for it.
+- Consequence: the server now tells every connecting TV page the version of the page files (`page.version`); a page that sees a different version than the one it was loaded with reloads itself. The limit for the browser-start request is now 25 seconds.
+
 ### F-008: The TV hangs up after every answer, so each request needs its own connection
 - Date: 2026-10-04
 - Source: the owner's debug log, then reproduced with a pretend TV in `tests/server/tv-remote.test.js`

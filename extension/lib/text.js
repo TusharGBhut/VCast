@@ -17,7 +17,7 @@ const ERROR_TEXT = {
   forbidden: 'VCast refused the request. Restart VCast on this computer.'
 };
 
-export const OPENING_ON_TV_TEXT = 'Opening VCast on the TV. This can take 15 seconds. If the TV asks, choose Allow.';
+export const OPENING_ON_TV_TEXT = 'Opening VCast on the TV. This can take up to 30 seconds. If the TV asks, choose Allow.';
 export const DRM_TEXT = "This video is protected (DRM) and can't be sent to the TV.";
 export const NO_VIDEO_TEXT = 'No video found yet. Start the video on the page, then open this again.';
 export const HIDDEN_VIDEO_TEXT = "A video is playing but its link wasn't seen. Reload the page, play the video, then open this again.";

@@ -9,7 +9,7 @@ const http = require('http');
 const path = require('path');
 const WebSocket = require('ws');
 const { logger } = require('./logger');
-const { TV_SEARCH_ADDRESS, TV_SEARCH_PORT, TV_SEARCH_MS, TV_INFO_PORT, TV_INFO_WAIT_MS, TV_REMOTE_PORT, TV_ALLOW_WAIT_MS, TV_BROWSER_APP, TV_STORE_BROWSER_APP, TV_APP_CLOSE_WAIT_MS, TV_BROWSER_START_CHECKS, TV_BROWSER_START_CHECK_MS, TV_REMOTE_NAME } = require('./constants');
+const { TV_SEARCH_ADDRESS, TV_SEARCH_PORT, TV_SEARCH_MS, TV_INFO_PORT, TV_INFO_WAIT_MS, TV_APP_SERVICE_WAIT_MS, TV_REMOTE_PORT, TV_ALLOW_WAIT_MS, TV_BROWSER_APP, TV_STORE_BROWSER_APP, TV_APP_CLOSE_WAIT_MS, TV_BROWSER_START_CHECKS, TV_BROWSER_START_CHECK_MS, TV_REMOTE_NAME } = require('./constants');
 
 const log = logger('tv');
 
@@ -77,7 +77,7 @@ function askTvAppService(ip, method, body, options) {
       // A new connection for every request. The TV hangs up after each answer, and a request
       // sent down the old connection fails at once (seen on the real TV, F-008).
       agent: false,
-      timeout: options.infoWaitMs || TV_INFO_WAIT_MS * 4,
+      timeout: options.infoWaitMs || TV_APP_SERVICE_WAIT_MS,
       headers: body ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(text) } : {}
     }, (answer) => {
       const parts = [];
