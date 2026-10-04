@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VCast</title>
+  <link rel="stylesheet" href="tv.css">
+</head>
+<body>
+  <p id="fullScreenHint" class="hidden">Press OK on the remote for full screen</p>
+  <p id="connection">Connecting...</p>
+  <div id="pairScreen" class="screen">
+    <h1>VCast</h1>
+    <p>On your computer, open the VCast extension and type this code</p>
+    <div id="code">------</div>
+  </div>
+
+  <div id="readyScreen" class="screen hidden">
+    <h1>Connected</h1>
+    <p>Play a video on your computer, open the VCast extension and press Cast.</p>
+    <p class="small">To pair a different computer, press OK on the remote.</p>
+  </div>
+
+  <div id="playerScreen" class="screen hidden">
+    <video id="video" playsinline></video>
+    <div id="overlay">
+      <div id="title"></div>
+      <div id="message"></div>
+      <div id="buttons">
+        <div id="backButton" class="button">-10s</div>
+        <div id="playButton" class="button">Pause</div>
+        <div id="forwardButton" class="button">+10s</div>
+      </div>
+      <div id="bar"><div id="barFill"></div></div>
+      <div id="time" class="small"></div>
+    </div>
+  </div>
+
+  <script src="hls.min.js"></script>
+  <script src="tv.js"></script>
+</body>
+</html>
