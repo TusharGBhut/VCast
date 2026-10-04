@@ -54,6 +54,12 @@ function positiveNumber(value) {
   return typeof value === 'number' && isFinite(value) && value >= 0 ? value : 0;
 }
 
+// Changes whenever a file of the TV page changes. An open TV page compares it with the one it
+// was loaded with, so it can tell that it is out of date.
+function tvPageVersion() {
+  return Object.values(TV_PAGE_FILES).map(([file]) => Math.round(fs.statSync(file).mtimeMs)).join('-');
+}
+
 function isWebLink(value) {
   return typeof value === 'string' && /^https?:\/\//i.test(value) && URL.canParse(value);
 }
@@ -300,6 +306,7 @@ function createApp(options) {
       return log.info('Cast stopped from the TV', { tv: shortId(tv.id) });
     }
     if (message.type === 'tv.hello') {
+      sendToTv(tv, { type: 'page.version', version: options.tvPageVersion || tvPageVersion() });
       if (!tv.session) return showCodeOnTv(tv, true);
       sendToTv(tv, { type: 'pair.ok' });
       // A reloaded TV page has lost its video, so send it again from where it stopped.

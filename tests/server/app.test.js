@@ -610,6 +610,18 @@ test('TV page: files are served and other WebSocket paths are refused', async ()
   const wrongPath = new WebSocket('ws://127.0.0.1:' + port + '/elsewhere');
   await new Promise((resolve) => wrongPath.on('error', resolve));
 
+  // AC-20: every hello is answered with the version of the TV page files.
+  const helloTv = await connectTv(port, 'television-version');
+  await helloTv.next('pair.code');
+  assert.match(helloTv.pageVersion, /^\d+(-\d+){3}$/, 'made from the four page files');
+  await helloTv.close();
+  const fixed = createApp({ listenOn: '127.0.0.1', tvPageVersion: 'build-two' });
+  const fixedPort = await fixed.start();
+  const fixedTv = await connectTv(fixedPort, 'television-version');
+  await fixedTv.next('pair.code');
+  assert.equal(fixedTv.pageVersion, 'build-two');
+  await fixed.stop();
+
   const silentTv = await connectTv(port, 'television-silent', false);
   silentTv.send({ type: 'media.state', status: 'playing' });
   silentTv.send({ type: 'something-else' });

@@ -23,6 +23,7 @@
   var subtitleShift = 0;
   var overlayStays = false;
   var savedTvId = null;
+  var pageVersion = null;
 
   function byId(id) {
     return document.getElementById(id);
@@ -322,7 +323,12 @@
   }
 
   function handleMessage(message) {
-    if (message.type === 'pair.code') {
+    if (message.type === 'page.version') {
+      // The first answer tells which version this page is. A different one later means VCast
+      // was updated while this page stayed open, so load the new page.
+      if (pageVersion && pageVersion !== message.version) return window.location.reload();
+      pageVersion = message.version;
+    } else if (message.type === 'pair.code') {
       // A code means we are not paired (any more), so a video still on screen is dead.
       paired = false;
       unloadVideo();

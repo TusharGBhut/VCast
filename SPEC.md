@@ -20,6 +20,7 @@ What this build must do, where the code lives, and how each part is checked. Rul
 | R13 | The TV page fills the whole screen: the first remote key or click asks the TV browser for full screen, which hides its address bar. A hint says so until then. If the browser refuses, the key press is lost once and keys work normally after. |
 | R14 | The TV player shows three on-screen buttons, -10s, Play/Pause and +10s, for remotes with a pointer. They appear with the title bar when the pointer moves, a key is pressed, or the video is paused, and hide again after 4 seconds of playing. |
 | R15 | Subtitle timing can be adjusted from the popup while a video plays: Earlier and Later move every subtitle line by 0.25 seconds per press, the popup shows the total ("Shown 0.75 s earlier"), and Reset goes back to the file's own timing. The adjustment survives a TV page reload and starts at zero for each new cast. |
+| R16 | A TV page that is already open picks up a newer version by itself. When it reconnects and the server's page files have changed since the page was loaded, it reloads. Nobody has to refresh the TV's browser after VCast is updated. |
 | R11 | Subtitle files (`.vtt`) the page loads are found, listed in the popup, sent through the server, and shown on the TV. English is picked by default; the last choice is remembered; it can be changed or turned off while playing. |
 
 ## Folders and files
@@ -76,6 +77,7 @@ Every message has `v: 1` and a `type`.
 | Type | From | Fields |
 |---|---|---|
 | `tv.hello` | TV | `hasVideo` |
+| `page.version` | Server | `version` (changes when a file of the TV page changes; sent in answer to every `tv.hello`) |
 | `pair.code` | Server | `code`, `expiresInSec` |
 | `pair.ok` | Server | — |
 | `media.load` | Server | `url` (path on the server), `kind` (`hls`\|`file`), `title`, `startAt`, `subtitles` (`[{ url, label }]`, paths on the server), `subtitle`, `subtitleShift` (seconds) |
@@ -150,6 +152,7 @@ DRM is spotted from the browser's own signals: the `encrypted` event on a video,
 | AC-17 | Given a Tizen TV on the network, `GET /api/tvs` lists it; `POST /api/open-on-tv` sends the TV's browser to a link with a one-time key; the TV page that connects with that key is paired with no code; a wrong, used or late key is not. Refusal, no answer and unreachable TV each give their own error. | tests/server/tv-remote.test.js, app.test.js, small-parts.test.js; real TV: found, waiting for Allow (F-004) |
 | AC-18 | Given a video playing on the TV page, clicking Play/Pause pauses and resumes it and its label says what it will do next; clicking +10s and -10s moves the position by 10 seconds; the buttons hide after 4 seconds of playing and come back when the pointer moves. | tests/e2e/tv.spec.js |
 | AC-19 | Given a cast with a subtitle showing, `subtitleShift` of +2 moves every line 2 seconds later on the TV, -1.5 moves them 1.5 seconds earlier than the file, and 0 restores the file's times; `/api/state` reports the value; values beyond 300 seconds or not a number are refused with 400. In the popup, Earlier/Later/Reset send the right value and the text shows the total. | tests/server/app.test.js, tests/extension/lib.test.js, tests/e2e/tv.spec.js, tests/e2e/popup.spec.js |
+| AC-20 | Given an open TV page, when the server restarts with changed page files and the page reconnects, the page reloads itself and then shows the new page. With unchanged files it does not reload (a playing video is not interrupted by a network drop). | tests/server/app.test.js, tests/e2e/tv.spec.js |
 | AC-15 | Lines, branches and functions are each covered 90% or more for `server/` (except `index.js`), `extension/background.js` and `extension/lib/`. | `npm run coverage` |
 
 ## Test scenarios
@@ -201,6 +204,7 @@ DRM is spotted from the browser's own signals: the `encrypted` event on a video,
 | Playing | Stop or Back on the remote | Cast ends on both sides | Tested |
 | Playing | New cast while one is playing | The new one replaces it | Tested |
 | Network | Wi-Fi drops for a moment | TV reconnects, video keeps playing | Tested |
+| Network | VCast was updated while the TV page stayed open | The page reloads itself when it reconnects | Tested |
 | Network | TV page reloaded | Video resumes at the last position | Tested |
 | Network | Computer goes to sleep | Video stops | Next: C13 |
 | Network | Computer's address changes | TV bookmark stops working | Next: C18 |

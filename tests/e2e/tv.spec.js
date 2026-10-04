@@ -806,3 +806,34 @@ test('AC-19: subtitle timing moves every line later, earlier, and back to the fi
   await tv.page.reload();
   await until(async () => (await times()) && (await times()).length === 2 && (await times())[0][0] === 5.75, 'the timing to be applied after a reload');
 });
+
+test('AC-20: an open TV page reloads itself when the server comes back with a newer page, and not otherwise', async () => {
+  const own = await startApp({ tvPageVersion: 'build-one' });
+  let restarted = null;
+  try {
+    const tv = await openTv(own.port);
+    // A mark that only a reload removes.
+    await tv.page.evaluate(() => (window.stillTheSamePage = true));
+    const samePage = () => tv.page.evaluate(() => window.stillTheSamePage === true).catch(() => false);
+
+    await own.stop();
+    restarted = await startApp({ port: own.port, tvPageVersion: 'build-one' });
+    await shownCodeAfterReconnect(tv.page);
+    assert.equal(await samePage(), true, 'same version: the page is left alone');
+
+    await restarted.stop();
+    restarted = await startApp({ port: own.port, tvPageVersion: 'build-two' });
+    await until(async () => !(await samePage()), 'the page to reload for the newer version', 15000);
+    await shownCode(tv.page);
+  } finally {
+    while (openContexts.length) await openContexts.pop().close();
+    if (restarted) await restarted.stop();
+  }
+});
+
+// After a server restart the page first shows "Lost the connection", then a fresh code.
+async function shownCodeAfterReconnect(page) {
+  await until(async () => (await page.locator('#connection').innerText()) === LOST_TEXT, 'the page to notice the server is gone', 15000);
+  await until(async () => (await page.locator('#connection').innerText()) === '', 'the page to reconnect', 15000);
+  return shownCode(page);
+}

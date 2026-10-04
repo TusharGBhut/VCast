@@ -109,11 +109,14 @@ function connectTv(port, id, hello, socketOptions) {
   const waiting = [];
   socket.on('message', (raw) => {
     const message = JSON.parse(String(raw));
+    // Kept apart from the other messages: every hello is answered with it.
+    if (message.type === 'page.version') return (tv.pageVersion = message.version);
     const index = waiting.findIndex((item) => item.type === message.type);
     if (index >= 0) waiting.splice(index, 1)[0].resolve(message);
     else got.push(message);
   });
   const tv = {
+    pageVersion: null,
     socket,
     got,
     send: (message) => socket.send(JSON.stringify(message)),
