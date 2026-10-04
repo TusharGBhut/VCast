@@ -9,6 +9,8 @@ const { isThisComputer, isHomeNetwork, homeNetworkAddresses } = require('../../s
 const { loadConfig, readEnvFile } = require('../../server/config');
 const { logger, setupLogger, siteOf } = require('../../server/logger');
 const { Pairing, shortId } = require('../../server/pairing');
+const { createKeepAwake, keepAwakeCommand } = require('../../server/keep-awake');
+const { EventEmitter } = require('events');
 
 test('network: knows this computer and home addresses from internet ones', () => {
   for (const address of ['127.0.0.1', '::1', '::ffff:127.0.0.1']) assert.equal(isThisComputer(address), true, address);
@@ -214,4 +216,67 @@ test('pairing: when the list is full it drops an offline TV, never a connected o
   assert.equal(pairing.connectTv('television-10', fakeSocket()), null, 'all connected, so the new one is refused');
   assert.equal(pairing.tvs.has('television-0'), true);
   assert.equal(pairing.tvs.size, 8);
+});
+
+// A pretend system tool: remembers how it was started and whether it was ended.
+function fakeSpawn() {
+  const started = [];
+  const spawn = (command, args) => {
+    const tool = Object.assign(new EventEmitter(), { command, args, killed: false, kill() { this.killed = true; } });
+    started.push(tool);
+    return tool;
+  };
+  return { started, spawn };
+}
+
+test('keep awake: each system gets its own tool, tied to the VCast process', () => {
+  assert.deepEqual(keepAwakeCommand('darwin', 42), ['caffeinate', ['-i', '-s', '-w', '42']]);
+  const windows = keepAwakeCommand('win32', 42);
+  assert.equal(windows[0], 'powershell');
+  assert.match(windows[1][2], /SetThreadExecutionState\(0x80000001\)/);
+  assert.match(windows[1][2], /Get-Process -Id 42 /, 'it ends when VCast is gone');
+  const linux = keepAwakeCommand('linux', 42);
+  assert.equal(linux[0], 'systemd-inhibit');
+  assert.ok(linux[1].includes('--pid=42'));
+  assert.equal(keepAwakeCommand('plan9', 42), null);
+});
+
+test('keep awake: starts the tool once, ends it when no longer needed, and copes without one', () => {
+  setupLogger({ level: 'off' });
+  const { started, spawn } = fakeSpawn();
+  const awake = createKeepAwake({ platform: 'darwin', pid: 42, spawn });
+  assert.equal(awake.isOn(), false);
+  awake.set(false);
+  awake.set(true);
+  awake.set(true);
+  assert.equal(started.length, 1, 'asked twice, started once');
+  assert.deepEqual([started[0].command, started[0].args.at(-1)], ['caffeinate', '42']);
+  assert.equal(awake.isOn(), true);
+  awake.set(false);
+  assert.deepEqual([started[0].killed, awake.isOn()], [true, false]);
+  started[0].emit('exit');
+
+  awake.set(true);
+  started[1].emit('exit');
+  assert.equal(awake.isOn(), false, 'the tool ending by itself is noticed');
+  awake.set(true);
+  assert.equal(started.length, 3, 'and it is started again when needed');
+
+  const lines = [];
+  setupLogger({ level: 'info', print: (line) => lines.push(line) });
+  const missing = fakeSpawn();
+  const without = createKeepAwake({ platform: 'linux', pid: 42, spawn: missing.spawn });
+  without.set(true);
+  missing.started[0].emit('error', new Error('spawn systemd-inhibit ENOENT'));
+  without.set(true);
+  without.set(true);
+  assert.equal(missing.started.length, 1, 'a missing tool is not tried again and again');
+  assert.equal(lines.filter((line) => /Could not keep the computer awake/.test(line)).length, 1);
+  assert.equal(without.isOn(), false);
+
+  const unknown = createKeepAwake({ platform: 'plan9', spawn: missing.spawn });
+  unknown.set(true);
+  assert.equal(missing.started.length, 1, 'an unknown system starts nothing');
+  assert.equal(typeof createKeepAwake().isOn(), 'boolean');
+  setupLogger({ level: 'off' });
 });

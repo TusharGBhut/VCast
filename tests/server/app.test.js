@@ -12,6 +12,19 @@ const COOKIE = 'login=TOP-SECRET-COOKIE';
 const HEADERS = { referer: PAGE, origin: 'https://page.example', cookie: COOKIE, userAgent: 'TestBrowser/1.0' };
 const EXTENSION = { origin: 'chrome-extension://abcdefgh' };
 
+// Stands in for the real keep-awake tool and remembers every switch on and off.
+const keepAwake = {
+  on: false,
+  switches: [],
+  isOn() {
+    return this.on;
+  },
+  set(needed) {
+    if (needed !== this.on) this.switches.push(needed ? 'on' : 'off');
+    this.on = needed;
+  }
+};
+
 let site;
 let app;
 let port;
@@ -20,7 +33,7 @@ const logLines = [];
 before(async () => {
   setupLogger({ level: 'debug', print: (line) => logLines.push(line) });
   site = await startFakeSite();
-  app = createApp({ listenOn: '127.0.0.1', wrongCodesPerMinute: 1000 });
+  app = createApp({ listenOn: '127.0.0.1', wrongCodesPerMinute: 1000, keepAwake });
   port = await app.start();
 });
 
@@ -436,6 +449,48 @@ test('subtitles go through the server and can be switched while playing', async 
   state = (await call(port, 'GET', '/api/state', { session })).json;
   assert.deepEqual([state.cast.subtitles, state.cast.subtitle, state.cast.subtitleShift], [[], -1, 0], 'a cast without subtitles, timing back to zero');
   await reloaded.close();
+});
+
+test('AC-21: the computer is kept awake only while a connected TV is showing a moving video', async () => {
+  const { tv, session } = await pairedTv('television-awake');
+  const report = async (status) => {
+    tv.send({ type: 'media.state', status, position: 10, duration: 100, volume: 1 });
+    await wait(40);
+    return keepAwake.on;
+  };
+  keepAwake.switches.length = 0;
+  assert.equal(keepAwake.on, false, 'paired but nothing playing');
+
+  await castTo(session, tv, '/video.mp4', 'file');
+  await wait(20);
+  assert.equal(keepAwake.on, true, 'on as soon as the cast starts');
+  assert.equal(await report('playing'), true);
+  assert.equal(await report('buffering'), true);
+  assert.equal(await report('paused'), false, 'a paused video lets the computer sleep');
+  assert.equal(await report('playing'), true);
+  assert.equal(await report('ended'), false);
+  assert.equal(await report('playing'), true);
+  assert.equal(await report('error'), false);
+  assert.equal(await report('playing'), true);
+
+  await call(port, 'POST', '/api/control', { session, body: { action: 'stop' } });
+  assert.equal(keepAwake.on, false, 'off when the cast is stopped');
+
+  await castTo(session, tv, '/video.mp4', 'file');
+  await wait(20);
+  assert.equal(keepAwake.on, true);
+  await tv.close();
+  await wait(40);
+  assert.equal(keepAwake.on, false, 'off when the TV is gone');
+
+  const back = await connectTv(port, 'television-awake', { hasVideo: true });
+  await back.next('pair.ok');
+  await wait(20);
+  assert.equal(keepAwake.on, true, 'on again when the TV comes back still playing');
+  await call(port, 'POST', '/api/unpair', { session, body: {} });
+  assert.equal(keepAwake.on, false, 'off when unpaired');
+  assert.deepEqual(keepAwake.switches, ['on', 'off', 'on', 'off', 'on', 'off', 'on', 'off', 'on', 'off', 'on', 'off']);
+  await back.close();
 });
 
 test('TV remote: Stop ends the cast, and OK on the Connected screen asks for a new code', async () => {

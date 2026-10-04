@@ -159,7 +159,9 @@ const NO_REAL_TVS = {
 // Starts the VCast server inside the test process. Keeps server logs off the screen.
 async function startApp(options) {
   setupLogger({ level: 'off' });
-  const app = createApp(Object.assign({ listenOn: '127.0.0.1', wrongCodesPerMinute: 1000, tvRemote: NO_REAL_TVS }, options));
+  // Tests must not change the sleep settings of the computer they run on.
+  const keepAwake = { set() {}, isOn: () => false };
+  const app = createApp(Object.assign({ listenOn: '127.0.0.1', wrongCodesPerMinute: 1000, tvRemote: NO_REAL_TVS, keepAwake }, options));
   const port = await app.start();
   return { app, port, stop: () => app.stop() };
 }

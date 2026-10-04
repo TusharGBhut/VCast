@@ -34,6 +34,14 @@ Each needs the real TV or a real browser. Record the answers below as findings.
 - Observed: `OS: Tizen`, `model: 23_K2LC_SQY_UHD_LIC`, `modelName: ST24043454`, `resolution: 3840x2160`, `developerMode: 0`, `DMP_available: true`, `TokenAuthSupport: true`, `remote_available: true`. Ports 9197 and 7676 (usual Samsung DLNA ports) did not answer.
 - Consequence: a 2023 platform should have a recent enough browser for hls.js; still to confirm on the TV itself. DLNA (R2) needs a proper search of the network before it is counted on. 4K is possible, so the quality list (C2) should offer it.
 
+### F-010: When the laptop sleeps, the TV stops; sleep from sitting idle can be held off, a closed lid cannot
+- Date: 2026-10-04
+- Source: the owner's report (the laptop's screen switched off or locked and the video stopped), then a check on this Mac
+- Observed: with the screen off the Mac went to sleep, which stops VCast, and the TV has nothing to fetch from. On macOS, `caffeinate -i -s -w <VCast pid>` held `PreventUserIdleSystemSleep` and `PreventSystemSleep` (seen in `pmset -g assertions`) and released both when ended.
+- Not tried: the Windows (PowerShell `SetThreadExecutionState`) and Linux (`systemd-inhibit`) commands. They are written from each system's documentation and have not been run.
+- Limit: closing a laptop lid puts macOS to sleep whatever an app asks. Only an admin setting (`sudo pmset -a disablesleep 1`, and `0` to undo), or mains power with an external screen, changes that.
+- Consequence: `server/keep-awake.js` holds off sleep while a connected TV reports loading, playing or buffering, and lets go when it is paused, finished, stopped or gone. The popup says to keep the lid open.
+
 ### F-009: A TV page left open keeps running its old code; and the TV needs about 8 seconds to start its browser
 - Date: 2026-10-04
 - Source: the owner's report ("the play/pause buttons are not showing on the TV") and `~/.vcast/vcast.log`

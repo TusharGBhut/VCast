@@ -52,6 +52,8 @@ module.exports = {
   MAX_SUBTITLE_NAME_TEXT: 40,
   SUBTITLES_OFF: -1,
   PLAYBACK_STATUSES: ['idle', 'loading', 'playing', 'paused', 'buffering', 'ended', 'error'],
+  // While a TV reports one of these, the computer is kept from sleeping.
+  STATUSES_WHILE_WATCHING: ['loading', 'playing', 'buffering'],
 
   // Fetching video from sites
   SITE_TIMEOUT_MS: 15 * 1000,

@@ -21,6 +21,7 @@ What this build must do, where the code lives, and how each part is checked. Rul
 | R14 | The TV player shows three on-screen buttons, -10s, Play/Pause and +10s, for remotes with a pointer. They appear with the title bar when the pointer moves, a key is pressed, or the video is paused, and hide again after 4 seconds of playing. |
 | R15 | Subtitle timing can be adjusted from the popup while a video plays: Earlier and Later move every subtitle line by 0.25 seconds per press, the popup shows the total ("Shown 0.75 s earlier"), and Reset goes back to the file's own timing. The adjustment survives a TV page reload and starts at zero for each new cast. |
 | R16 | A TV page that is already open picks up a newer version by itself. When it reconnects and the server's page files have changed since the page was loaded, it reloads. Nobody has to refresh the TV's browser after VCast is updated. |
+| R17 | While a video is loading, playing or buffering on a connected TV, VCast keeps the computer from going to sleep (the screen may still switch off and lock). When the video is paused, stopped or finished, or the TV is gone, the computer may sleep again. Closing a laptop lid still puts it to sleep; the popup says to keep the lid open. |
 | R11 | Subtitle files (`.vtt`) the page loads are found, listed in the popup, sent through the server, and shown on the TV. English is picked by default; the last choice is remembered; it can be changed or turned off while playing. |
 
 ## Folders and files
@@ -34,6 +35,7 @@ server/           the app that runs on the PC
   network.js        home-network address checks
   logger.js         logging
   tv-remote.js      finds Tizen TVs and opens a page in the TV's browser
+  keep-awake.js     keeps the computer from sleeping while a video plays
   config.js         settings a person may change, read from .env
   constants.js      fixed numbers and lists
 tv/               the page the TV opens (ES5 only)
@@ -153,6 +155,7 @@ DRM is spotted from the browser's own signals: the `encrypted` event on a video,
 | AC-18 | Given a video playing on the TV page, clicking Play/Pause pauses and resumes it and its label says what it will do next; clicking +10s and -10s moves the position by 10 seconds; the buttons hide after 4 seconds of playing and come back when the pointer moves. | tests/e2e/tv.spec.js |
 | AC-19 | Given a cast with a subtitle showing, `subtitleShift` of +2 moves every line 2 seconds later on the TV, -1.5 moves them 1.5 seconds earlier than the file, and 0 restores the file's times; `/api/state` reports the value; values beyond 300 seconds or not a number are refused with 400. In the popup, Earlier/Later/Reset send the right value and the text shows the total. | tests/server/app.test.js, tests/extension/lib.test.js, tests/e2e/tv.spec.js, tests/e2e/popup.spec.js |
 | AC-20 | Given an open TV page, when the server restarts with changed page files and the page reconnects, the page reloads itself and then shows the new page. With unchanged files it does not reload (a playing video is not interrupted by a network drop). | tests/server/app.test.js, tests/e2e/tv.spec.js |
+| AC-21 | Given a cast, keep-awake is switched on when the cast starts and while the TV reports loading, playing or buffering, and switched off when the TV reports paused, ended or error, when the cast is stopped or unpaired, when the TV disconnects, and when VCast stops. The system tool is started once, ends with VCast, and a missing tool is reported once without stopping anything. | tests/server/small-parts.test.js, tests/server/app.test.js; checked by hand on macOS with `pmset -g assertions` |
 | AC-15 | Lines, branches and functions are each covered 90% or more for `server/` (except `index.js`), `extension/background.js` and `extension/lib/`. | `npm run coverage` |
 
 ## Test scenarios
@@ -206,7 +209,8 @@ DRM is spotted from the browser's own signals: the `encrypted` event on a video,
 | Network | Wi-Fi drops for a moment | TV reconnects, video keeps playing | Tested |
 | Network | VCast was updated while the TV page stayed open | The page reloads itself when it reconnects | Tested |
 | Network | TV page reloaded | Video resumes at the last position | Tested |
-| Network | Computer goes to sleep | Video stops | Next: C13 |
+| Network | Computer left idle, screen switches off or locks | VCast holds off sleep while the TV plays, so the video keeps going | Tested |
+| Network | Laptop lid closed | The laptop sleeps and the video stops; the popup says to keep the lid open | Known limit |
 | Network | Computer's address changes | TV bookmark stops working | Next: C18 |
 | Network | TV is off or its page is closed | Popup says the TV isn't connected; Cast disabled | Tested |
 | Safety | Web page tries to call the API or pose as the TV | Refused | Tested |
@@ -244,7 +248,7 @@ Written from the seat of the person using it at home. "Today" is what the curren
 | C10 | A mute button, and the picked quality shown while playing. | Volume only | Should |
 | C11 | When a link runs out mid-film, it is renewed without me doing anything. | Message asks me to reload and cast again | Should |
 | C12 | If the TV cannot play this kind of video (HEVC, AV1), the message says so and suggests another quality. | General "could not play" message | Should |
-| C13 | The computer does not go to sleep while it is sending a video. | Not handled | Should |
+| C13 | The computer does not go to sleep while it is sending a video. | Done (R17) for sleep from sitting idle, with the screen off or locked. Not possible: a closed laptop lid. | Done; lid close stays a limit |
 | C14 | The popup remembers where I stopped, so I can carry on later. | Not available | Could |
 | C15 | Next episode plays by itself; I can line up several videos. | Not available | Could |
 

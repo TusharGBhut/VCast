@@ -9,10 +9,11 @@ const { VideoList, handleVideoRequest, serverPathFor } = require('./proxy');
 const { logger, siteOf } = require('./logger');
 const net = require('net');
 const realTvRemote = require('./tv-remote');
+const { createKeepAwake } = require('./keep-awake');
 const VERSION = require('../package.json').version;
 
 const log = logger('app');
-const { MESSAGE_VERSION, CONTROL_ACTIONS, PLAYBACK_STATUSES, MAX_BODY_BYTES, MAX_TV_MESSAGE_BYTES, MAX_HEADER_TEXT, MAX_TITLE_TEXT, TIDY_EVERY_MS, MAX_SUBTITLES, MAX_SUBTITLE_NAME_TEXT, MAX_SUBTITLE_SHIFT_SECONDS, SUBTITLES_OFF } = require('./constants');
+const { MESSAGE_VERSION, CONTROL_ACTIONS, PLAYBACK_STATUSES, MAX_BODY_BYTES, MAX_TV_MESSAGE_BYTES, MAX_HEADER_TEXT, MAX_TITLE_TEXT, TIDY_EVERY_MS, MAX_SUBTITLES, MAX_SUBTITLE_NAME_TEXT, MAX_SUBTITLE_SHIFT_SECONDS, SUBTITLES_OFF, STATUSES_WHILE_WATCHING } = require('./constants');
 const TV_FOLDER = path.join(__dirname, '..', 'tv');
 const TV_PAGE_FILES = {
   '/': [path.join(TV_FOLDER, 'index.html'), 'text/html; charset=utf-8'],
@@ -74,6 +75,7 @@ function createApp(options) {
   options = options || {};
   const fromHomeNetwork = options.isHomeNetwork || isHomeNetwork;
   const tvRemote = options.tvRemote || realTvRemote;
+  const keepAwake = options.keepAwake || createKeepAwake();
   const savedTvs = options.savedTvsFile ? realTvRemote.readSavedTvs(options.savedTvsFile) : {};
   const videoList = new VideoList();
   const pairing = new Pairing(Object.assign({}, options, { onTvForgotten: endCast }));
@@ -96,6 +98,12 @@ function createApp(options) {
   function sendVideoToTv(tv, startAt) {
     const { path: url, kind, title, subtitles, subtitle, subtitleShift } = tv.cast;
     sendToTv(tv, { type: 'media.load', url, kind, title, startAt, subtitles, subtitle, subtitleShift });
+  }
+
+  // The computer is kept awake while some connected TV is showing a video that is moving.
+  function updateKeepAwake() {
+    const watching = (tv) => tv.socket && tv.cast && tv.playback && STATUSES_WHILE_WATCHING.includes(tv.playback.status);
+    keepAwake.set([...pairing.tvs.values()].some(watching));
   }
 
   function endCast(tv) {
@@ -349,10 +357,12 @@ function createApp(options) {
     }
     const route = request.url.split('?')[0];
     if (route.startsWith('/api/')) {
-      return handleApi(request, response, route).catch((error) => {
-        log.error('API call failed', { route, reason: error });
-        if (!response.headersSent) sendJson(response, 500, { error: 'internal' });
-      });
+      return handleApi(request, response, route)
+        .catch((error) => {
+          log.error('API call failed', { route, reason: error });
+          if (!response.headersSent) sendJson(response, 500, { error: 'internal' });
+        })
+        .then(updateKeepAwake);
     }
     if (route.startsWith('/media/')) return handleVideoRequest(request, response, videoList);
     serveTvPage(request, response, route);
@@ -376,6 +386,7 @@ function createApp(options) {
       tvSocket.on('message', (raw) => {
         try {
           handleTvMessage(tv, String(raw));
+          updateKeepAwake();
         } catch (error) {
           log.error('Could not handle a TV message', { tv: shortId(tv.id), reason: error });
         }
@@ -383,6 +394,7 @@ function createApp(options) {
       tvSocket.on('error', () => {});
       tvSocket.on('close', () => {
         pairing.disconnectTv(tv, tvSocket);
+        updateKeepAwake();
         log.info('TV disconnected', { tv: shortId(tv.id) });
       });
       log.info('TV connected', { tv: shortId(tv.id), paired: !!tv.session });
@@ -403,6 +415,7 @@ function createApp(options) {
       if (!tv.session) showCodeOnTv(tv, false);
     }
     pairing.removeOldTvs();
+    updateKeepAwake();
   }
   const tidyTimer = setInterval(tidyUp, options.tidyEveryMs || TIDY_EVERY_MS);
   tidyTimer.unref();
@@ -421,6 +434,7 @@ function createApp(options) {
     },
     stop() {
       clearInterval(tidyTimer);
+      keepAwake.set(false);
       for (const socket of tvSockets.clients) socket.terminate();
       server.closeAllConnections();
       return new Promise((resolve) => server.close(resolve));

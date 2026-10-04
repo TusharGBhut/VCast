@@ -45,7 +45,7 @@ Everything else is v1.1 or Future. Screen mirroring (the only route for DRM cont
 
 - Protected (DRM) sites such as Netflix, Prime Video and Hotstar cannot be sent.
 - Sites that build the video inside the page from signed pieces (YouTube and similar) cannot be sent.
-- The computer must stay on and awake while the TV plays.
+- The computer must stay on while the TV plays. VCast keeps it from falling asleep on its own, and the screen may switch off or lock. A laptop lid must stay open: closing it puts the laptop to sleep and the video stops.
 - The customer's wish list, with priorities, is in [SPEC.md](../SPEC.md) under "Customer requirements for the next round".
 
 ## Releases
