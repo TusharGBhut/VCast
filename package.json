@@ -1,0 +1,38 @@
+{
+  "name": "vcast",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Send a video from a web page to the TV on the same home network",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "start:debug": "node server/index.js --debug",
+    "test": "node --test \"tests/server/*.test.js\" \"tests/extension/*.test.js\"",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-include=\"server/**\" --test-coverage-include=\"extension/background.js\" --test-coverage-include=\"extension/lib/**\" --test-coverage-exclude=\"server/index.js\" --test-coverage-lines=90 --test-coverage-functions=90 --test-coverage-branches=90 \"tests/server/*.test.js\" \"tests/extension/*.test.js\"",
+    "test:e2e": "node --test --test-concurrency=1 \"tests/e2e/*.spec.js\"",
+    "lint": "eslint .",
+    "types": "tsc -p jsconfig.json",
+    "check": "npm run lint && npm run types && npm run coverage",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "hls.js": "^1.7.3",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/chrome": "^0.3.4",
+    "@types/node": "^26.6.4",
+    "@types/ws": "^8.18.2",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "playwright": "^1.63.0",
+    "typescript": "^7.0.2"
+  }
+}

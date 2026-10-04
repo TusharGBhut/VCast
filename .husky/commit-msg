@@ -1,0 +1,20 @@
+# Checks the first line of the commit message: "<type>: <what changed>", short and plain.
+first_line=$(head -n 1 "$1")
+
+case "$first_line" in
+  "Merge "*|"Revert "*) exit 0 ;;
+esac
+
+if ! printf '%s' "$first_line" | grep -Eq '^(feat|fix|docs|test|chore|refactor): [a-z0-9"].{8,}[^. ]$'; then
+  echo "Commit message not accepted: \"$first_line\""
+  echo "Write it as:  <type>: <what changed>"
+  echo "  types: feat, fix, docs, test, chore, refactor"
+  echo "  start the text with a small letter, say what changed, no full stop at the end"
+  echo "  example:  fix: use a new connection for each request to the TV"
+  exit 1
+fi
+
+if [ ${#first_line} -gt 72 ]; then
+  echo "Commit message too long: ${#first_line} characters, the first line may have 72."
+  exit 1
+fi
