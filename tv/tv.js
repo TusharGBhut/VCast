@@ -7,11 +7,7 @@
   var OVERLAY_MS = 4000;
   var SEEK_SECONDS = 10;
   var LONG_SEEK_SECONDS = 30;
-  var POINTER_REPORT_MS = 3000;
-  // The buttons under the progress bar, left to right. The remote starts on Play/Pause.
-  var BUTTONS = ['backButton', 'playButton', 'forwardButton', 'stopButton'];
-  var PLAY_BUTTON = 1;
-  var KEY = { ENTER: 13, BACK: 10009, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, PAUSE: 19, PLAY: 415, STOP: 413, REWIND: 412, FORWARD: 417, PLAY_PAUSE: 10252 };
+  var KEY = { ENTER: 13, BACK: 10009, LEFT: 37, RIGHT: 39, PAUSE: 19, PLAY: 415, STOP: 413, REWIND: 412, FORWARD: 417, PLAY_PAUSE: 10252 };
 
   var video = document.getElementById('video');
   var socket = null;
@@ -26,11 +22,6 @@
   var subtitlePlace = -1;
   var subtitleShift = 0;
   var overlayStays = false;
-  // Where the remote's arrows are: on the progress bar, or on one of the buttons below it.
-  var onButtons = false;
-  var selectedButton = PLAY_BUTTON;
-  var buttonActions = {};
-  var lastPointerReport = 0;
   var savedTvId = null;
   var pageVersion = null;
 
@@ -125,26 +116,12 @@
 
   // Brings the title bar and buttons back. They hide again after a while, unless the last
   // message was one that stays (paused, an error).
-  // Shows which control the remote is on.
-  function showSelected() {
-    byId('bar').className = onButtons ? '' : 'selected';
-    for (var i = 0; i < BUTTONS.length; i++) {
-      byId(BUTTONS[i]).className = onButtons && i === selectedButton ? 'button selected' : 'button';
-    }
-  }
-
   function wakeOverlay() {
     byId('overlay').className = '';
-    byId('playerScreen').className = 'screen';
     clearTimeout(overlayTimer);
     if (!overlayStays) {
       overlayTimer = setTimeout(function () {
         byId('overlay').className = 'hidden';
-        // Hides the pointer too, and the next key press starts from the progress bar again.
-        if (hasVideo) byId('playerScreen').className = 'screen watching';
-        onButtons = false;
-        selectedButton = PLAY_BUTTON;
-        showSelected();
       }, OVERLAY_MS);
     }
   }
@@ -302,31 +279,11 @@
 
   // The on-screen buttons do what the remote keys do. They only work while a video is loaded.
   function onButton(id, action) {
-    buttonActions[id] = function () {
+    byId(id).onclick = function () {
       if (!hasVideo) return;
       needsKeyPress = false;
       action();
     };
-    byId(id).onclick = buttonActions[id];
-  }
-
-  // The arrows of the remote. Up and Down choose between the progress bar and the buttons.
-  // On the bar, Left and Right move through the video; on the buttons they move the highlight.
-  function onArrow(key) {
-    if (key === KEY.UP || key === KEY.DOWN) {
-      onButtons = key === KEY.DOWN;
-    } else {
-      var step = key === KEY.LEFT ? -1 : 1;
-      if (!onButtons) return seekBy(step * SEEK_SECONDS);
-      selectedButton = Math.max(0, Math.min(BUTTONS.length - 1, selectedButton + step));
-    }
-    showSelected();
-    wakeOverlay();
-  }
-
-  function onOk() {
-    if (onButtons) buttonActions[BUTTONS[selectedButton]]();
-    else togglePlay();
   }
 
   function showWaitingScreen() {
@@ -421,8 +378,6 @@
 
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
-    // Lets the computer's log show which remote keys this TV's browser passes on to the page.
-    send({ type: 'tv.input', key: key });
     if (fullScreenTriesLeft > 0 && key !== KEY.BACK) {
       fullScreenTriesLeft--;
       if (goFullScreen()) return event.preventDefault();
@@ -435,12 +390,12 @@
       showOverlay('');
       return startPlaying();
     }
-    if (key === KEY.ENTER) onOk();
-    else if (key === KEY.LEFT || key === KEY.RIGHT || key === KEY.UP || key === KEY.DOWN) onArrow(key);
-    else if (key === KEY.PLAY_PAUSE) togglePlay();
+    if (key === KEY.ENTER || key === KEY.PLAY_PAUSE) togglePlay();
     else if (key === KEY.PLAY) startPlaying();
     else if (key === KEY.PAUSE) video.pause();
     else if (key === KEY.STOP || key === KEY.BACK) stopFromRemote();
+    else if (key === KEY.LEFT) seekBy(-SEEK_SECONDS);
+    else if (key === KEY.RIGHT) seekBy(SEEK_SECONDS);
     else if (key === KEY.REWIND) seekBy(-LONG_SEEK_SECONDS);
     else if (key === KEY.FORWARD) seekBy(LONG_SEEK_SECONDS);
     else return;
@@ -450,15 +405,9 @@
   onButton('playButton', togglePlay);
   onButton('backButton', function () { seekBy(-SEEK_SECONDS); });
   onButton('forwardButton', function () { seekBy(SEEK_SECONDS); });
-  onButton('stopButton', stopFromRemote);
-  showSelected();
   // Moving the remote's pointer brings the buttons back.
   document.addEventListener('mousemove', function () {
     if (hasVideo) wakeOverlay();
-    var now = new Date().getTime();
-    if (now - lastPointerReport < POINTER_REPORT_MS) return;
-    lastPointerReport = now;
-    send({ type: 'tv.input', pointer: true });
   });
 
   // The stream player switches subtitle tracks on by itself; put back the one that was chosen.

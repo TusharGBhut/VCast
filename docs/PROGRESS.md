@@ -55,7 +55,6 @@ IDs are from `docs/jira/phase-1.txt`. Status: `todo`, `in progress`, `needs TV c
 
 ## Blocked or waiting on the user
 
-- On the real TV: do the arrows and OK reach the page (the debug log shows `TV remote key`), or does the browser only move its pointer (`TV pointer moved`)? Is the pointer hidden while watching?
 - On the real TV: does pressing OK hide the browser's address bar? Are subtitles a readable size? Do the on-screen buttons work with the pointer? Does the `1 2 3 4 5` Developer Mode box appear in the Apps screen?
 
 ## Session log

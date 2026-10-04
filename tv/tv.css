@@ -88,10 +88,6 @@ video::cue { font-size: 4vh; background: rgba(0, 0, 0, 0.6); }
   border-radius: 8px;
   cursor: pointer;
 }
-/* "selected" is where the remote's arrows are; hover is where a pointer is. */
-.button:hover, .button.selected { background: #4da3ff; border-color: #4da3ff; }
-#bar.selected { outline: 3px solid #fff; outline-offset: 3px; }
-/* The pointer is in the way while watching; it comes back when it is moved. */
-#playerScreen.watching { cursor: none; }
+.button:hover { background: #4da3ff; border-color: #4da3ff; }
 #bar { height: 8px; background: #444; margin: 16px 0 8px; }
 #barFill { height: 8px; width: 0; background: #4da3ff; }

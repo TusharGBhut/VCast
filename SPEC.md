@@ -24,7 +24,6 @@ What this build must do, where the code lives, and how each part is checked. Rul
 | R17 | While a video is loading, playing or buffering on a connected TV, VCast keeps the computer from going to sleep (the screen may still switch off and lock). When the video is paused, stopped or finished, or the TV is gone, the computer may sleep again. Closing a laptop lid still puts it to sleep; the popup says to keep the lid open. |
 | R18 | The popup lists only the video that is on the page now. The list is emptied when the tab goes to another page, including sites that change the address without loading a new page (next episode), and a frame that loads something new loses the entries it had. Looking at the page again never brings back links from before that moment. |
 | R19 | The title sent to the TV names the video that is playing. Some sites play the next episode without updating the tab's title; when the address ends in an episode number that the title does not mention, the title is made from the address ("Dr Stone · Episode 18"). The tab's title and address are read at the moment Cast is pressed. |
-| R20 | The TV player is worked with the remote's arrows and OK, like an app, with a clear highlight on what is selected. There are two rows. On the progress bar (selected at first): Left and Right move 10 seconds, OK plays or pauses. Down goes to the buttons (-10s, Play/Pause, +10s, Stop): Left and Right move the highlight, OK presses the highlighted button. Up goes back to the bar. The pointer is hidden while the controls are hidden. The server logs which remote keys and pointer moves reach the page (debug level), to learn what a TV's browser passes on. |
 | R11 | Subtitle files (`.vtt`) the page loads are found, listed in the popup, sent through the server, and shown on the TV. English is picked by default; the last choice is remembered; it can be changed or turned off while playing. |
 
 ## Folders and files
@@ -89,7 +88,6 @@ Every message has `v: 1` and a `type`.
 | `media.control` | Server | `action`, `value` |
 | `media.state` | TV | `status`, `position`, `duration`, `volume`, `error` |
 | `session.end` | Server | — |
-| `tv.input` | TV | `key` (key code of a remote key that reached the page) or `pointer: true` (the pointer moved); only written to the debug log |
 | `media.stopped` | TV | — (Stop or Back pressed on the remote; the server ends the cast) |
 | `pair.restart` | TV | — (OK pressed on the "Connected" screen; the server unpairs and shows a new code) |
 
@@ -161,7 +159,6 @@ DRM is spotted from the browser's own signals: the `encrypted` event on a video,
 | AC-20 | Given an open TV page, when the server restarts with changed page files and the page reconnects, the page reloads itself and then shows the new page. With unchanged files it does not reload (a playing video is not interrupted by a network drop). | tests/server/app.test.js, tests/e2e/tv.spec.js |
 | AC-21 | Given a cast, keep-awake is switched on when the cast starts and while the TV reports loading, playing or buffering, and switched off when the TV reports paused, ended or error, when the cast is stopped or unpaired, when the TV disconnects, and when VCast stops. The system tool is started once, ends with VCast, and a missing tool is reported once without stopping anything. | tests/server/small-parts.test.js, tests/server/app.test.js; checked by hand on macOS with `pmset -g assertions` |
 | AC-22 | Given a tab listing episode 1's stream, when the site moves to episode 2 by changing the address without a page load and loads the new stream, the list holds only episode 2's stream and subtitles. A change of only the part after `?` or `#` keeps the list. When the player's frame loads a new page, the entries found in that frame are removed and other frames' entries stay. Links the page loaded before the change are not added again when the popup looks at the page. | tests/extension/lib.test.js, tests/extension/background.test.js, tests/e2e/detection.spec.js; real-site run |
-| AC-23 | Given a playing video, Left/Right on the bar move 10 seconds and OK toggles play; Down highlights Play/Pause in the button row; Right then OK presses +10s; Left twice then OK presses -10s; Right to the end then OK presses Stop and ends the cast; Up returns to the bar. The highlight returns to the bar when the controls hide. Keys that reach the page appear in the server's debug log. | tests/e2e/tv.spec.js, tests/server/app.test.js |
 | AC-15 | Lines, branches and functions are each covered 90% or more for `server/` (except `index.js`), `extension/background.js` and `extension/lib/`. | `npm run coverage` |
 
 ## Test scenarios
@@ -224,7 +221,6 @@ DRM is spotted from the browser's own signals: the `encrypted` event on a video,
 | Safety | Device outside the home network | Connection dropped | Tested |
 | Safety | Hostile playlist or redirect pointing at home devices | Refused | Tested |
 | Safety | Broken or odd messages and requests | Ignored; the server keeps running | Tested |
-| Real TV | The TV browser moves a pointer with the arrows and does not pass them to the page | On-screen buttons can be clicked with the pointer; the debug log shows which keys arrive | Manual check on the TV |
 | Real TV | Screen saver while the code is shown; which remote keys reach the page; formats the TV plays | Unknown | Manual check on the TV |
 
 ## Not in this build
