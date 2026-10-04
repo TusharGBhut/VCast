@@ -1,0 +1,140 @@
+h2. a) Architecture decision
+
+||Option||Needs on TV||Needs on PC||Works with Referer-locked streams||Remote control quality||Effort||Risk||
+|R1 TV-browser receiver|Internet app open on the server page|Server: HTTP page, WebSocket, proxy|Yes, every request goes through the proxy|Good: play/pause/seek/stop/volume over WebSocket, plus D-pad on the TV|M|Old Chromium on the TV may lack MSE or codecs; user must open a URL once|
+|R2 DLNA push|Nothing to open; built-in renderer|Server: SSDP, UPnP controller, proxy|Yes for MP4; HLS only if the renderer fetches playlists (many do not)|Fair: AVTransport state polling, seek support varies by firmware|L|Renderer may reject HLS, MIME types and DIDL metadata are firmware-specific|
+|Hybrid (R1 default, R2 fallback)|Either|Both stacks behind one receiver interface|Yes|Best available per stream|L|Two code paths to test on one TV|
+
+*Recommendation: R1 for MVP.* It is the only mode where HLS is under our control (hls.js) and control latency is one WebSocket hop.
+R2 moves to v1.1 as a second implementation of the same receiver interface, which gives the hybrid without rework.
+The R1 risk (old Tizen Chromium) is retired first by spike CAST-001.
+
+h3. Components
+
+* Extension (MV3): content script (video + DRM detection, all frames) -> service worker (network observation, candidate store in chrome.storage.session) -> popup (pairing, cast, controls).
+* Extension <-> Server: HTTP on http://127.0.0.1:8787/api, called from the popup. No sockets held by the service worker.
+* Server (Node.js, single process): local API, pairing registry, stream proxy with HLS playlist rewriting, receiver page host, WebSocket endpoint /tv.
+* Server <-> TV: HTTP for the page and media (http://<PC-IP>:8787), WebSocket ws://<PC-IP>:8787/tv for pairing and control.
+* Server -> origin servers: HTTPS/HTTP with the original page's Referer, Origin, Cookie and User-Agent.
+
+h3. Message contracts (version field v=1 on all)
+
+||Name||Direction||Purpose||
+|GET /api/state|Extension -> Server|Server version, receiver URLs, pairing, cast and playback state|
+|POST /api/pair|Extension -> Server|Submit the code shown on the TV, receive a session token|
+|POST /api/cast|Extension -> Server|Register a stream and its headers, start playback|
+|POST /api/control|Extension -> Server|play, pause, seek, stop, volume|
+|POST /api/unpair|Extension -> Server|End the session|
+|tv.hello|TV -> Server|Receiver connected; says whether it still holds media|
+|pair.code|Server -> TV|Code to display, with expiry|
+|pair.ok|Server -> TV|Pairing matched|
+|media.load|Server -> TV|Proxy path, kind, title, start position|
+|media.control|Server -> TV|Control action|
+|media.state|TV -> Server|status, position, duration, volume, error|
+|session.end|Server -> TV|Session ended; show a new code|
+
+h2. b) Spikes
+
+||ID||Question||Timebox||Output||
+|CAST-001|Tizen Internet app on the real TV: Chromium version, MSE/hls.js, H.264/AAC/HEVC, WebSocket, plain-HTTP LAN page, autoplay, remote keys, screen saver|0.5 day|Go/no-go for R1; list of receiver workarounds|
+|CAST-002|Extension-to-server transport: localhost HTTP/WebSocket vs Native Messaging across Chrome, Brave, Edge, Opera|0.5 day|Transport decision (assumed: localhost HTTP)|
+|CAST-020|DLNA renderer on the real TV: SSDP visibility, HLS vs MP4, DIDL-Lite and MIME requirements, Seek/volume|1 day|Go/no-go for R2 in v1.1|
+
+h2. c) Epics
+
+* Detection
+* Pairing
+* Server Core
+* Stream Proxy
+* TV Receiver
+* Playback Control
+* DLNA
+* Packaging & Install
+* Observability
+* Cross-browser
+
+h2. d) Backlog
+
+||ID||Epic||Title||Type||Priority (MoSCoW)||Size (S/M/L)||Depends on||Release||
+|CAST-001|TV Receiver|[Receiver] Verify Tizen browser playback capabilities|Spike|Must|S|None|MVP|
+|CAST-002|Server Core|[Server] Decide extension-to-server transport|Spike|Must|S|None|MVP|
+|CAST-003|Server Core|[Server] Serve local API and receiver page on the LAN|Technical|Must|M|CAST-002|MVP|
+|CAST-004|Server Core|[Server] Restrict access to LAN and extension origins|Security|Must|S|CAST-003|MVP|
+|CAST-005|Pairing|[Server] Issue and match pairing codes|User|Must|M|CAST-003|MVP|
+|CAST-006|TV Receiver|[Receiver] Show pairing code on TV|User|Must|S|CAST-005|MVP|
+|CAST-007|Pairing|[Popup] Pair extension with TV by code|User|Must|S|CAST-005|MVP|
+|CAST-008|Stream Proxy|[Proxy] Relay registered media with original headers|Technical|Must|M|CAST-003|MVP|
+|CAST-009|Stream Proxy|[Proxy] Rewrite HLS playlists through the proxy|Technical|Must|M|CAST-008|MVP|
+|CAST-010|Stream Proxy|[Proxy] Refuse unregistered and unsigned URLs|Security|Must|S|CAST-008|MVP|
+|CAST-011|Detection|[Extension] Detect MP4 and HLS requests per tab|User|Must|M|None|MVP|
+|CAST-012|Detection|[Extension] Detect video elements in pages and iframes|User|Must|S|CAST-011|MVP|
+|CAST-013|Detection|[Extension] Detect DRM and show not-supported message|User|Must|S|CAST-011|MVP|
+|CAST-014|TV Receiver|[Receiver] Play MP4 and HLS from the proxy|User|Must|M|CAST-001, CAST-006, CAST-009|MVP|
+|CAST-015|Playback Control|[Popup] Cast the selected stream to the TV|User|Must|M|CAST-007, CAST-011, CAST-014|MVP|
+|CAST-016|Playback Control|[Popup] Control play, pause, seek, stop and volume|User|Must|M|CAST-015|MVP|
+|CAST-017|TV Receiver|[Receiver] Control playback with the TV remote|User|Should|S|CAST-014|MVP|
+|CAST-018|Pairing|[Server] Restore session after Wi-Fi drop or page reload|User|Should|M|CAST-005, CAST-014|MVP|
+|CAST-019|Observability|[Server] Log events with safe fields only|Security|Must|S|CAST-003|MVP|
+|CAST-020|DLNA|[DLNA] Verify renderer behaviour with HLS and MP4|Spike|Should|M|None|v1.1|
+|CAST-021|DLNA|[Server] Discover DLNA renderers via SSDP|Technical|Should|M|CAST-020|v1.1|
+|CAST-022|DLNA|[Server] Push media to renderer with AVTransport|User|Should|L|CAST-021, CAST-008|v1.1|
+|CAST-023|Stream Proxy|[Proxy] Refresh expired signed URLs from the page|User|Should|M|CAST-015|v1.1|
+|CAST-024|Detection|[Extension] Choose quality variant before casting|User|Must|M|CAST-034|v1.1|
+|CAST-025|Detection|[Extension] Detect streams by content type|Technical|Should|S|CAST-011|v1.1|
+|CAST-026|Packaging & Install|[Server] Package single binary with Windows auto-start|DevOps|Must|M|CAST-003|v1.1|
+|CAST-027|Packaging & Install|[Server] Handle Windows firewall prompt at install|Infra|Should|S|CAST-026|v1.1|
+|CAST-028|Observability|[Server] Write rotating local log file|Technical|Could|S|CAST-019|v1.1|
+|CAST-029|TV Receiver|[Receiver] Play DASH streams with separate sound and picture|User|Must|M|CAST-014|v1.1|
+|CAST-030|Cross-browser|[Extension] Verify Brave, Edge and Opera|Technical|Should|S|CAST-015|v1.1|
+|CAST-031|Cross-browser|[Extension] Port to Firefox|Technical|Won't|M|CAST-030|Future|
+|CAST-032|TV Receiver|[Receiver] Add webOS, Android TV, Chromecast, Roku targets|Technical|Won't|L|CAST-022|Future|
+|CAST-033|Playback Control|[Extension] Mirror tab for DRM content|User|Won't|L|None|Future|
+|CAST-034|Detection|[Server] Read qualities, length and live flag of a stream|Technical|Must|M|CAST-009|v1.1|
+|CAST-035|Detection|[Popup] Show resolution and length of each video|User|Must|S|CAST-034|v1.1|
+|CAST-036|Detection|[Popup] Mark main video and push adverts down|User|Must|S|CAST-034|v1.1|
+|CAST-037|Playback Control|[Popup] Start TV at browser position and pause browser|User|Must|S|CAST-015|v1.1|
+|CAST-038|Playback Control|[Popup] Show LIVE and hide seek bar for live streams|User|Must|S|CAST-034|v1.1|
+|CAST-039|Pairing|[Server] Keep pairing across restarts|User|Must|S|CAST-005|v1.1|
+|CAST-040|Playback Control|[Receiver] Choose sound language and subtitles|User|Should|M|CAST-034|v1.1|
+|CAST-041|Detection|[Extension] Show video count on icon and add Send to TV menu|User|Should|S|CAST-011|v1.1|
+|CAST-042|Helper Core|[Server] Keep computer awake while casting|User|Should|S|CAST-015|v1.1|
+|CAST-043|Observability|[Popup] Copy safe details for a bug report|User|Should|S|CAST-019|v1.1|
+|CAST-044|Pairing|[Popup] Name TVs and pick one|User|Could|M|CAST-039|Future|
+|CAST-045|Playback Control|[Popup] Remember position and queue next videos|User|Could|M|CAST-015|Future|
+
+h2. e) User journeys
+
+h3. First-time setup
+# Install the server on the PC and start it; allow it through the firewall on private networks.
+# Load the extension in the browser.
+# Open the extension popup: it shows the address to open on the TV.
+# On the TV, open the Internet app and enter that address; bookmark it. The TV shows a 6-digit code.
+# Type the code into the popup. The TV shows "Connected".
+
+h3. Everyday cast
+# Open the TV bookmark (the session is restored if the server is still running).
+# Start a video on the PC, open the popup, press Cast on the detected stream.
+# The video plays on the TV; the popup shows play/pause, seek, volume and stop.
+
+h3. Failure and recovery
+# DRM site: the popup says the video is protected and cannot be cast.
+# Server not running: the popup says so and offers Retry.
+# Wi-Fi drop: the TV reconnects on its own and keeps the session; if the page was reloaded, playback resumes from the last position.
+# Expired link: the popup says the link expired; reload the page and cast again.
+
+h2. f) Assumptions and open questions
+
+* Server is Node.js for MVP and is run from source; a single binary comes with CAST-026. (assumed)
+* Extension-to-server transport is HTTP on 127.0.0.1:8787. (assumed, pending CAST-002)
+* Pairing code is 6 digits, valid 5 minutes, single use; 5 failed attempts per minute. (assumed)
+* One sender per TV; a paired TV shows no code, so a second sender cannot join. (assumed)
+* Volume control in R1 changes the video element volume, not the TV system volume. (assumed)
+* Cookies are replayed only to the host of the registered stream. (assumed)
+
+# Which Tizen version/year is the TV, and does its Internet app play HLS through hls.js? (CAST-001)
+# Does the TV screen saver start while the pairing screen is shown?
+# Is a fixed PC IP (DHCP reservation) acceptable, so the TV bookmark stays valid?
+# Should a second household PC be able to take over a TV that is already paired?
+# Is Opera required for MVP or can it wait for CAST-030?
+
+Reply with a story ID, 'next', or 'all MVP' to generate full stories.
