@@ -34,6 +34,16 @@ Each needs the real TV or a real browser. Record the answers below as findings.
 - Observed: `OS: Tizen`, `model: 23_K2LC_SQY_UHD_LIC`, `modelName: ST24043454`, `resolution: 3840x2160`, `developerMode: 0`, `DMP_available: true`, `TokenAuthSupport: true`, `remote_available: true`. Ports 9197 and 7676 (usual Samsung DLNA ports) did not answer.
 - Consequence: a 2023 platform should have a recent enough browser for hls.js; still to confirm on the TV itself. DLNA (R2) needs a proper search of the network before it is counted on. 4K is possible, so the quality list (C2) should offer it.
 
+### F-013: A video that stalled: the site was fine, and the stall began after the laptop's screen switched off
+- Date: 2026-10-04
+- Source: the owner's report ("the video keeps loading and stopping, only sometimes"), `~/.vcast/vcast.log`, and `pmset -g log`
+- Observed:
+  - The video site answered all 505 requests in the last stretch, none refused, 168 ms on average, the slowest 683 ms. So the site and the internet line were not the cause.
+  - The laptop's screen switched off at 18:21:06 and came on at 18:23:12. VCast kept passing video on until 18:22:33, then passed nothing for 45 seconds, and started again at 18:23:18, six seconds after the screen came back. macOS logged no sleep in that time, and VCast was holding off sleep.
+  - The laptop was on battery with Low Power Mode on, and VCast was started from a terminal inside an editor app.
+- Not known: what held VCast up while the screen was off (macOS slowing background work on battery, the editor app being put to rest, or the Wi-Fi saving power), and whether the other stalls the owner saw had the same cause. The log did not record what the TV was doing or whether VCast itself was paused.
+- Consequence: the log now records each change of what the TV is doing, problems its player reports, slow or abandoned video pieces, and VCast being held up by the computer. The TV page also keeps only 30 seconds of video behind and at most 60 ahead, because TVs have little memory; that is a precaution, not a confirmed cause.
+
 ### F-012: The TV's browser keeps the remote's arrows and OK for its pointer; the page never hears them
 - Date: 2026-10-04
 - Source: `~/.vcast/vcast.log` after the owner tried an arrows-and-OK player on the real TV

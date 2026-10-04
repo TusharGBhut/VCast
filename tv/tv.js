@@ -5,6 +5,11 @@
   var RETRY_MS = 2000;
   var REPORT_MS = 1000;
   var OVERLAY_MS = 4000;
+  var PROBLEM_REPORT_MS = 2000;
+  // TVs have little memory. Keep half a minute behind and ahead instead of the whole video.
+  var KEEP_BEHIND_SECONDS = 30;
+  var LOAD_AHEAD_SECONDS = 30;
+  var LOAD_AHEAD_MOST_SECONDS = 60;
   var SEEK_SECONDS = 10;
   var LONG_SEEK_SECONDS = 30;
   var KEY = { ENTER: 13, BACK: 10009, LEFT: 37, RIGHT: 39, PAUSE: 19, PLAY: 415, STOP: 413, REWIND: 412, FORWARD: 417, PLAY_PAUSE: 10252 };
@@ -22,6 +27,7 @@
   var subtitlePlace = -1;
   var subtitleShift = 0;
   var overlayStays = false;
+  var lastProblemReport = 0;
   var savedTvId = null;
   var pageVersion = null;
 
@@ -106,9 +112,28 @@
     return video.paused ? 'paused' : 'playing';
   }
 
+  // How many seconds of video are loaded after the current position.
+  function loadedAhead() {
+    try {
+      var now = video.currentTime;
+      for (var i = 0; i < video.buffered.length; i++) {
+        if (video.buffered.start(i) <= now && now <= video.buffered.end(i)) return video.buffered.end(i) - now;
+      }
+    } catch (e) { /* not known in this browser */ }
+    return 0;
+  }
+
+  // Tells the computer what the player complained about, for its log. At most one every 2 seconds.
+  function reportProblem(detail) {
+    var now = new Date().getTime();
+    if (now - lastProblemReport < PROBLEM_REPORT_MS) return;
+    lastProblemReport = now;
+    send({ type: 'tv.problem', detail: String(detail) });
+  }
+
   function report() {
     var length = isFinite(video.duration) ? video.duration : 0;
-    send({ type: 'media.state', status: status(), position: video.currentTime || 0, duration: length, volume: video.volume, error: problem || undefined });
+    send({ type: 'media.state', status: status(), position: video.currentTime || 0, duration: length, volume: video.volume, error: problem || undefined, loadedAhead: loadedAhead(), height: video.videoHeight || 0 });
     byId('barFill').style.width = (length ? Math.min(100, (video.currentTime / length) * 100) : 0) + '%';
     byId('time').innerHTML = clock(video.currentTime) + (length ? ' / ' + clock(length) : '');
     byId('playButton').innerHTML = video.paused ? 'Play' : 'Pause';
@@ -240,8 +265,9 @@
     var triedRecovery = false;
     var Hls = window.Hls;
     if (message.kind === 'hls' && Hls && Hls.isSupported()) {
-      hls = new Hls({ startPosition: startAt > 0 ? startAt : -1 });
+      hls = new Hls({ startPosition: startAt > 0 ? startAt : -1, backBufferLength: KEEP_BEHIND_SECONDS, maxBufferLength: LOAD_AHEAD_SECONDS, maxMaxBufferLength: LOAD_AHEAD_MOST_SECONDS });
       hls.on(Hls.Events.ERROR, function (event, data) {
+        reportProblem((data.fatal ? 'stopped: ' : '') + data.details);
         if (!data.fatal) return;
         if (data.type === Hls.ErrorTypes.MEDIA_ERROR && !triedRecovery) {
           triedRecovery = true;

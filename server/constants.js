@@ -61,6 +61,11 @@ module.exports = {
   MAX_PLAYLIST_BYTES: 5 * 1024 * 1024,
   HEADERS_TO_PASS_ON: ['content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified', 'etag'],
 
+  // Finding out why a video stops and starts
+  SLOW_PIECE_MS: 8 * 1000,
+  HELD_UP_CHECK_MS: 1000,
+  HELD_UP_WARN_MS: 5 * 1000,
+
   // Logging
   MAX_LOG_FILE_BYTES: 2 * 1024 * 1024,
   MAX_LOG_VALUE_TEXT: 120

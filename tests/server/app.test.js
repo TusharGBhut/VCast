@@ -367,6 +367,14 @@ test('AC-8: controls reach the TV and the TV state reaches the extension', async
   assert.equal(state.playback.error, 'cannot_play');
   assert.equal(logLines.filter((line) => /TV could not play/.test(line) && /televi/.test(line)).length, 1, 'a repeated error is logged once');
 
+  // Each change of what the TV is doing is logged once, with what helps explain a stall.
+  tv.send({ type: 'media.state', status: 'buffering', position: 61.4, duration: 100, volume: 1, loadedAhead: 0.2, height: 1080 });
+  tv.send({ type: 'media.state', status: 'buffering', position: 61.4, duration: 100, volume: 1, loadedAhead: 0.2, height: 1080 });
+  tv.send({ type: 'tv.problem', detail: 'bufferStalledError' });
+  await wait(50);
+  assert.equal(logLines.filter((line) => /INFO +app +TV playback is now buffering {2}tv=televi {2}position=61 {2}loadedAhead=0 {2}height=1080$/.test(line)).length, 1);
+  assert.ok(logLines.some((line) => /WARN +app +TV player reported a problem {2}tv=televi {2}detail=bufferStalledError$/.test(line)));
+
   await control({ action: 'stop' });
   assert.equal((await tv.next('media.control')).action, 'stop');
   state = (await call(port, 'GET', '/api/state', { session })).json;
@@ -683,6 +691,19 @@ test('TV page: files are served and other WebSocket paths are refused', async ()
   await wait(50);
   assert.equal(silentTv.got.length, 0, 'an unpaired TV is told nothing until it says hello');
   await silentTv.close();
+});
+
+test('the log says when the computer held VCast up', async () => {
+  const dozing = createApp({ listenOn: '127.0.0.1', heldUpCheckMs: 20, heldUpWarnMs: 80, keepAwake });
+  await dozing.start();
+  await wait(60);
+  const before = logLines.length;
+  const until = Date.now() + 250;
+  while (Date.now() < until); // nothing else can run, as when the computer dozes
+  await wait(60);
+  await dozing.stop();
+  const held = logLines.slice(before).filter((line) => /WARN +app +VCast was held up by the computer {2}seconds=1$/.test(line));
+  assert.equal(held.length, 1);
 });
 
 test('start: a port that is taken gives an error', async () => {

@@ -88,6 +88,7 @@ Every message has `v: 1` and a `type`.
 | `media.control` | Server | `action`, `value` |
 | `media.state` | TV | `status`, `position`, `duration`, `volume`, `error` |
 | `session.end` | Server | — |
+| `tv.problem` | TV | `detail` (what the TV's player reported; written to the log only) |
 | `media.stopped` | TV | — (Stop or Back pressed on the remote; the server ends the cast) |
 | `pair.restart` | TV | — (OK pressed on the "Connected" screen; the server unpairs and shows a new code) |
 
@@ -122,6 +123,11 @@ The server accepts a TV connection only from the home network and only from its 
 - Levels: debug, info, warn, error. `--debug` or `VCAST_LOG_LEVEL=debug` turns on debug.
 - File: `~/.vcast/vcast.log`, one older file kept once it passes 2 MB.
 - Any value that looks like a link is cut down to its site name before it is written.
+- To explain a video that stops and starts, the log also records:
+  - each change of what the TV is doing (`TV playback is now buffering`), with the position, how many seconds are loaded ahead, and the picture height;
+  - problems the TV's player reports, also ones it recovers from (`TV player reported a problem`);
+  - a video piece that took more than 8 seconds to pass on (`A video piece was slow to arrive`), and a download the TV gave up on;
+  - VCast itself being held up by the computer for more than 5 seconds (`VCast was held up`), which is what happens when the computer dozes.
 
 ### Extension permissions
 

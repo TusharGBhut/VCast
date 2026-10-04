@@ -13,7 +13,7 @@ const { createKeepAwake } = require('./keep-awake');
 const VERSION = require('../package.json').version;
 
 const log = logger('app');
-const { MESSAGE_VERSION, CONTROL_ACTIONS, PLAYBACK_STATUSES, MAX_BODY_BYTES, MAX_TV_MESSAGE_BYTES, MAX_HEADER_TEXT, MAX_TITLE_TEXT, TIDY_EVERY_MS, MAX_SUBTITLES, MAX_SUBTITLE_NAME_TEXT, MAX_SUBTITLE_SHIFT_SECONDS, SUBTITLES_OFF, STATUSES_WHILE_WATCHING } = require('./constants');
+const { MESSAGE_VERSION, CONTROL_ACTIONS, PLAYBACK_STATUSES, MAX_BODY_BYTES, MAX_TV_MESSAGE_BYTES, MAX_HEADER_TEXT, MAX_TITLE_TEXT, TIDY_EVERY_MS, MAX_SUBTITLES, MAX_SUBTITLE_NAME_TEXT, MAX_SUBTITLE_SHIFT_SECONDS, SUBTITLES_OFF, STATUSES_WHILE_WATCHING, HELD_UP_CHECK_MS, HELD_UP_WARN_MS } = require('./constants');
 const TV_FOLDER = path.join(__dirname, '..', 'tv');
 const TV_PAGE_FILES = {
   '/': [path.join(TV_FOLDER, 'index.html'), 'text/html; charset=utf-8'],
@@ -307,6 +307,9 @@ function createApp(options) {
       log.info('TV asked for a new code', { tv: shortId(tv.id) });
       return showCodeOnTv(tv, true);
     }
+    if (message.type === 'tv.problem') {
+      return log.warn('TV player reported a problem', { tv: shortId(tv.id), detail: String(message.detail).slice(0, 60) });
+    }
     // Stop pressed on the TV remote.
     if (message.type === 'media.stopped' && tv.cast) {
       endCast(tv);
@@ -324,8 +327,12 @@ function createApp(options) {
     if (message.type === 'media.state' && tv.session && tv.cast) {
       const status = PLAYBACK_STATUSES.includes(message.status) ? message.status : 'idle';
       const error = typeof message.error === 'string' ? message.error.slice(0, 40) : undefined;
-      if (status === 'error' && (!tv.playback || tv.playback.status !== 'error')) {
-        log.warn('TV could not play the video', { tv: shortId(tv.id), reason: error });
+      if (!tv.playback || tv.playback.status !== status) {
+        if (status === 'error') log.warn('TV could not play the video', { tv: shortId(tv.id), reason: error });
+        else {
+          const seen = { tv: shortId(tv.id), position: Math.round(positiveNumber(message.position)), loadedAhead: Math.round(positiveNumber(message.loadedAhead)), height: positiveNumber(message.height) };
+          log.info('TV playback is now ' + status, seen);
+        }
       }
       tv.playback = {
         status,
@@ -417,6 +424,17 @@ function createApp(options) {
     pairing.removeOldTvs();
     updateKeepAwake();
   }
+  // A computer that dozes (screen off on battery, for example) stops VCast for a while without
+  // any error. A clock that should tick every second and comes back late shows it in the log.
+  const checkEvery = options.heldUpCheckMs || HELD_UP_CHECK_MS;
+  let lastTick = Date.now();
+  const heldUpTimer = setInterval(() => {
+    const late = Date.now() - lastTick - checkEvery;
+    lastTick = Date.now();
+    if (late > (options.heldUpWarnMs || HELD_UP_WARN_MS)) log.warn('VCast was held up by the computer', { seconds: Math.round(late / 1000) || 1 });
+  }, checkEvery);
+  heldUpTimer.unref();
+
   const tidyTimer = setInterval(tidyUp, options.tidyEveryMs || TIDY_EVERY_MS);
   tidyTimer.unref();
 
@@ -434,6 +452,7 @@ function createApp(options) {
     },
     stop() {
       clearInterval(tidyTimer);
+      clearInterval(heldUpTimer);
       keepAwake.set(false);
       for (const socket of tvSockets.clients) socket.terminate();
       server.closeAllConnections();

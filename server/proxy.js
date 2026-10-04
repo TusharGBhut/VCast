@@ -9,7 +9,7 @@ const { shortId } = require('./pairing');
 const { isHomeNetwork } = require('./network');
 
 const log = logger('proxy');
-const { MAX_PLAYLIST_BYTES, MAX_REDIRECTS, SITE_TIMEOUT_MS, HEADERS_TO_PASS_ON } = require('./constants');
+const { MAX_PLAYLIST_BYTES, MAX_REDIRECTS, SITE_TIMEOUT_MS, HEADERS_TO_PASS_ON, SLOW_PIECE_MS } = require('./constants');
 
 // Videos the extension asked us to play. The server fetches a link only when it is one of these,
 // or when it carries a signature made with that video's secret key. Signatures are only made
@@ -239,6 +239,16 @@ function handleVideoRequest(tvRequest, tvResponse, videoList) {
     if (answer.statusCode >= 400) log.warn('The video site refused a request', details);
     else log.debug('Fetched from the video site', details);
     sendAnswerToTv(video, answer, finalLink, tvRequest, tvResponse);
+
+    // For the log: how much was passed on and how long it took, to tell a slow site or network
+    // from a TV that stopped asking.
+    let bytes = 0;
+    answer.on('data', (part) => (bytes += part.length));
+    tvResponse.on('close', () => {
+      const passedOn = { site: finalLink.host, bytes, ms: Date.now() - startedAt };
+      if (!tvResponse.writableFinished) log.debug('The TV stopped a download early', passedOn);
+      else if (passedOn.ms > SLOW_PIECE_MS) log.warn('A video piece was slow to arrive', passedOn);
+    });
   });
 }
 
