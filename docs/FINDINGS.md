@@ -34,6 +34,12 @@ Each needs the real TV or a real browser. Record the answers below as findings.
 - Observed: `OS: Tizen`, `model: 23_K2LC_SQY_UHD_LIC`, `modelName: ST24043454`, `resolution: 3840x2160`, `developerMode: 0`, `DMP_available: true`, `TokenAuthSupport: true`, `remote_available: true`. Ports 9197 and 7676 (usual Samsung DLNA ports) did not answer.
 - Consequence: a 2023 platform should have a recent enough browser for hls.js; still to confirm on the TV itself. DLNA (R2) needs a proper search of the network before it is counted on. 4K is possible, so the quality list (C2) should offer it.
 
+### F-012: The TV's browser keeps the remote's arrows and OK for its pointer; the page never hears them
+- Date: 2026-10-04
+- Source: `~/.vcast/vcast.log` after the owner tried an arrows-and-OK player on the real TV
+- Observed: while the owner used the remote on the player, the page reported 9 pointer moves and no key presses at all. The arrows move the browser's pointer and OK clicks where it points.
+- Consequence: a player worked by arrow keys cannot work in this TV's browser, and the change was taken out again at the owner's request (the commit and its revert are in the history). What does work there: on-screen buttons clicked with the pointer. Hiding the pointer or steering by keys needs either a setting in the TV browser's own menu (not found yet) or an installed app, which needs Developer Mode.
+
 ### F-011: This site plays the next episode without loading a new page, and never updates the tab title
 - Date: 2026-10-04
 - Source: the owner's screenshot (four streams listed, title "Episode 1" while episode 18 played), then a Playwright run on the same site pressing Next

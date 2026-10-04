@@ -61,6 +61,7 @@ IDs are from `docs/jira/phase-1.txt`. Status: `todo`, `in progress`, `needs TV c
 
 Newest first. One or two lines per session: what changed, what was verified, what is left.
 
+- 2026-10-04: Tried a player worked by the remote's arrows and OK; on the real TV no key reaches the page, only pointer moves (F-012), so it was reverted at the owner's request. Also today: the list follows the page on next-episode sites, and the title follows the episode (F-011).
 - 2026-10-04: The computer is now kept awake while the TV plays (F-010); an open TV page reloads itself after an update (F-009). 64 unit tests and 104 browser tests pass. Not yet tried on the real TV: on-screen buttons, subtitle timing, full screen.
 - 2026-10-04: Fixed "Open on TV" failing at random: the TV hangs up after every answer, so each request now uses a new connection (F-008); the browser start is checked and retried. Confirmed working on the real TV by the owner. Added full screen on first key, on-screen player buttons, subtitle timing. Git repo started with ESLint and commit-message hooks. 61 unit tests and 103 browser tests pass.
 - 2026-10-03: Browser-test round found 4 bugs (error text replaced by "Paused", lost-connection text hidden once paired, no Play after a video ends, cookie missed when the page script saw the video first); all fixed. Added subtitles, Open on TV, `.env` settings and constants files. 58 unit tests (99% lines, 96% branches, 97% functions) and 99 browser tests pass. A real streaming page played at 1080p with subtitles through the server in desktop Chrome (F-003).
