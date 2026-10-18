@@ -36,9 +36,4 @@ Copy `.env.example` to `.env` and change what you need: port, log level, log fil
 | `npm run check` | lint, type check, and tests with 90% coverage |
 | `npm run test:e2e` | browser tests with Playwright |
 
-Commits are checked by two hooks: ESLint on the files being committed, and the form of the commit message (`feat: ...`, `fix: ...`; see [docs/RULES.md](docs/RULES.md)).
-
-## More
-
-- [SPEC.md](SPEC.md): what this build does and how each part is tested.
-- [docs/](docs/): product facts, rules, architecture, process, progress, findings.
+Commits are checked by two hooks: ESLint on the files being committed, and the form of the commit message (`feat: ...`, `fix: ...`, `docs: ...`, `test: ...`, `chore: ...`, `refactor: ...`).

@@ -3,3 +3,16 @@ coverage/
 *.log
 .DS_Store
 .env
+
+# Only README.md is published. Notes, specs and agent instructions stay on the owner's computer.
+*.md
+!README.md
+docs/
+brand/
+brag-output/
+
+# Editor and agent rule files stay local too.
+.claude/
+.cursor/
+.windsurfrules
+.gemini/
