@@ -2,9 +2,7 @@
 
 Send the video you are watching in the browser to the TV on your home network. Nothing is installed on the TV: it opens a page in its own browser.
 
-<a href="media/vcast-demo.mp4"><img src="media/vcast-demo.jpg" alt="Demo video: the TV shows a pairing code, the code is typed into the extension popup, and the video plays on the TV" width="270"></a>
-
-The video above is 20 seconds long: the TV shows a pairing code, you type it into the extension, and the video starts on the TV. Select the picture to play it. The pairing code, site and film in it are made up.
+<a href="media/vcast-demo.webm"><img src="media/vcast-demo-preview.gif" alt="VCast demo: the TV shows a pairing code, you type it into the extension, and the video plays on the TV" width="270"></a>
 
 ## Run it
 
