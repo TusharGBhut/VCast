@@ -2,7 +2,9 @@
 
 Send the video you are watching in the browser to the TV on your home network. Nothing is installed on the TV: it opens a page in its own browser.
 
-<a href="media/vcast-demo.webm"><img src="media/vcast-demo-preview.gif" alt="VCast demo: the TV shows a pairing code, you type it into the extension, and the video plays on the TV" width="270"></a>
+<a href="media/vcast-demo.webm"><img src="media/vcast-demo-preview.gif" alt="VCast demo: pair the laptop with the TV's code, the extension finds the video, Cast plays it on the TV, and the subtitles switch between languages; then the same from the phone app, which becomes the remote" width="720"></a>
+
+Click the picture for the full 1-minute video (laptop and phone, end to end).
 
 ## Run it
 
